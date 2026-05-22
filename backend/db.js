@@ -23,6 +23,7 @@ const DDL = `
     floor_number   INTEGER NOT NULL,
     family_head    TEXT NOT NULL DEFAULT 'self',
     resident_count INTEGER NOT NULL DEFAULT 0,
+    position       TEXT,
     birthdate      DATE,
     id_card_address TEXT,
     phone          TEXT,

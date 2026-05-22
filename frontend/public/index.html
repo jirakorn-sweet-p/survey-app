@@ -147,6 +147,10 @@
                 <option>ร.ต.</option><option>ร.ท.</option><option>ร.อ.</option>
               </select>
             </div>
+            <div class="field">
+              <label class="lbl">ตำแหน่ง</label>
+              <input type="text" id="f-position" placeholder="เช่น ผู้บังคับหมู่">
+            </div>
           </div>
           <div class="row2">
             <div class="field"><label class="lbl">ชื่อ <span class="req">*</span></label><input type="text" id="f-fname" placeholder="ชื่อ" required></div>
@@ -382,6 +386,7 @@ function collectData(){
 
   return{
     rank:            document.getElementById('f-rank').value,
+    position:        document.getElementById('f-position').value.trim()||null,
     first_name:      document.getElementById('f-fname').value.trim(),
     last_name:       document.getElementById('f-lname').value.trim(),
     room_number:     document.getElementById('f-room').value.trim(),
@@ -450,7 +455,7 @@ function renderList(rows){
   document.getElementById('list-body').innerHTML=rows.map((r,i)=>`
     <tr>
       <td><span class="badge badge-navy">${i+1}</span></td>
-      <td><strong>${r.rank}</strong> ${r.first_name} ${r.last_name}</td>
+      <td><strong>${r.rank}</strong> ${r.first_name} ${r.last_name}${r.position?'<br><span style="font-size:12px;color:var(--text3)">'+r.position+'</span>':''}</td>
       <td>ห้อง <strong>${r.room_number}</strong> ชั้น ${r.floor_number}</td>
       <td style="font-size:13px">${r.phone||'—'}</td>
       <td>${r.family_count>0?`<span class="badge badge-gold">${r.family_count} คน</span>`:'—'}</td>
@@ -478,6 +483,7 @@ async function viewDetail(id){
     <div class="modal-sec">
       <div class="modal-sec-title">ข้อมูลส่วนตัว</div>
       <div class="dr"><span class="dl">ยศ</span><span>${r.rank}</span></div>
+      <div class="dr"><span class="dl">ตำแหน่ง</span><span>${r.position||'—'}</span></div>
       <div class="dr"><span class="dl">ชื่อ-นามสกุล</span><span>${r.first_name} ${r.last_name}</span></div>
       <div class="dr"><span class="dl">วัน/เดือน/ปีเกิด</span><span>${fmtDate(r.birthdate)}</span></div>
       <div class="dr"><span class="dl">โทรศัพท์</span><span>${r.phone||'—'}</span></div>
@@ -525,6 +531,7 @@ async function editRecord(id){
   showPage('form');
   document.getElementById('edit-id').value=id;
   document.getElementById('f-rank').value=r.rank;
+  document.getElementById('f-position').value=r.position||'';
   document.getElementById('f-fname').value=r.first_name;
   document.getElementById('f-lname').value=r.last_name;
   document.getElementById('f-room').value=r.room_number;

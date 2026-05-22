@@ -63,7 +63,7 @@ initDB().then(pool => {
     const {
       rank, first_name, last_name, room_number, floor_number,
       family_head = 'self', family_members = [], vehicles = [],
-      birthdate = null, id_card_address = null, phone = null
+      position = null, birthdate = null, id_card_address = null, phone = null
     } = req.body;
 
     const client = await pool.connect();
@@ -71,10 +71,10 @@ initDB().then(pool => {
       await client.query('BEGIN');
       const { rows: [{ id: rid }] } = await client.query(
         `INSERT INTO residents
-           (rank,first_name,last_name,room_number,floor_number,family_head,resident_count,birthdate,id_card_address,phone)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+           (rank,first_name,last_name,room_number,floor_number,family_head,resident_count,position,birthdate,id_card_address,phone)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
         [rank, first_name.trim(), last_name.trim(), room_number.trim(), floor_number,
-         family_head, family_members.length, birthdate||null, id_card_address||null, phone||null]
+         family_head, family_members.length, position||null, birthdate||null, id_card_address||null, phone||null]
       );
       for (const m of family_members) {
         await client.query(
@@ -108,7 +108,7 @@ initDB().then(pool => {
     const {
       rank, first_name, last_name, room_number, floor_number,
       family_head = 'self', family_members = [], vehicles = [],
-      birthdate = null, id_card_address = null, phone = null
+      position = null, birthdate = null, id_card_address = null, phone = null
     } = req.body;
 
     const client = await pool.connect();
@@ -119,9 +119,9 @@ initDB().then(pool => {
 
       await client.query(
         `UPDATE residents SET rank=$1,first_name=$2,last_name=$3,room_number=$4,floor_number=$5,
-         family_head=$6,resident_count=$7,birthdate=$8,id_card_address=$9,phone=$10,updated_at=NOW() WHERE id=$11`,
+         family_head=$6,resident_count=$7,position=$8,birthdate=$9,id_card_address=$10,phone=$11,updated_at=NOW() WHERE id=$12`,
         [rank, first_name.trim(), last_name.trim(), room_number.trim(), floor_number,
-         family_head, family_members.length, birthdate||null, id_card_address||null, phone||null, req.params.id]
+         family_head, family_members.length, position||null, birthdate||null, id_card_address||null, phone||null, req.params.id]
       );
       await client.query('DELETE FROM family_members WHERE resident_id=$1', [req.params.id]);
       await client.query('DELETE FROM vehicles WHERE resident_id=$1', [req.params.id]);
@@ -163,9 +163,7 @@ initDB().then(pool => {
 
   app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../frontend/public/index.html')));
 
-  app.listen(PORT, () => {
-    console.log(`✅  Server running → http://localhost:${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`✅  Server running → http://localhost:${PORT}`));
 
 }).catch(err => {
   console.error('❌ Failed to initialize database:', err);
