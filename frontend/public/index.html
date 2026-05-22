@@ -4,250 +4,338 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบสำรวจข้อมูลผู้พักอาศัย — แฟลต 2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  :root{
-    --navy:#0d2640;--navy2:#1a3a5c;--navy3:#2a5080;
-    --gold:#c9a84c;--green:#1a6b3c;--red:#b91c1c;
-    --bg:#f4f6f9;--surface:#fff;
-    --border:#dde3ec;--border2:#c5cfe0;
-    --text:#1a2233;--text2:#4a5568;--text3:#8898aa;
-    --radius:10px;--radius-sm:6px;
-    --shadow:0 2px 12px rgba(13,38,64,.10);
-    --shadow-lg:0 8px 32px rgba(13,38,64,.16);
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6}
+:root{
+  --navy:#0d2640;--navy2:#1a3a5c;--navy3:#2a5080;
+  --gold:#c9a84c;--green:#1a6b3c;--red:#b91c1c;
+  --bg:#f4f6f9;--surface:#fff;
+  --border:#dde3ec;--border2:#c5cfe0;
+  --text:#1a2233;--text2:#4a5568;--text3:#8898aa;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 2px 12px rgba(13,38,64,.10);
+  --shadow-lg:0 8px 32px rgba(13,38,64,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6}
 
-  .topbar{background:var(--navy);color:#fff;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25)}
-  .topbar-brand{display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600}
-  .emblem{width:34px;height:34px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px}
-  .nav-tabs{display:flex;gap:4px}
-  .nav-tab{padding:6px 18px;border-radius:var(--radius-sm);cursor:pointer;font-size:14px;color:rgba(255,255,255,.7);transition:.15s;border:none;background:none;font-family:inherit}
-  .nav-tab:hover{color:#fff;background:rgba(255,255,255,.1)}
-  .nav-tab.active{color:#fff;background:rgba(255,255,255,.18)}
+/* ── Topbar ── */
+.topbar{background:var(--navy);color:#fff;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.28)}
+.topbar-brand{display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600}
+.emblem{width:34px;height:34px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.nav-tabs{display:flex;gap:4px}
+.nav-tab{padding:6px 18px;border-radius:var(--radius-sm);cursor:pointer;font-size:14px;color:rgba(255,255,255,.7);transition:.15s;border:none;background:none;font-family:inherit}
+.nav-tab:hover{color:#fff;background:rgba(255,255,255,.1)}
+.nav-tab.active{color:#fff;background:rgba(255,255,255,.18)}
+.user-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:13px;color:#fff}
+.btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:var(--radius-sm);padding:5px 12px;font-size:13px;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-logout:hover{background:rgba(255,255,255,.2)}
 
-  .container{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-  .card-header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
-  .card-header-left{display:flex;align-items:center;gap:10px}
-  .card-header h2{font-size:17px;font-weight:600}
-  .card-header .sub{font-size:13px;opacity:.7;margin-top:2px}
-  .card-body{padding:1.5rem}
+/* ── Login Page ── */
+.login-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d2640 0%,#1a3a5c 50%,#0d2640 100%);padding:1rem}
+.login-card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);width:100%;max-width:400px;overflow:hidden}
+.login-header{background:linear-gradient(135deg,#0d2640,#1a3a5c);padding:2rem;text-align:center;color:#fff}
+.login-emblem{width:64px;height:64px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 1rem}
+.login-header h1{font-size:20px;font-weight:700}
+.login-header p{font-size:13px;opacity:.7;margin-top:4px}
+.login-body{padding:2rem}
+.login-field{margin-bottom:1.25rem}
+.login-field label{display:block;font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.login-field input{width:100%;border:1.5px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;font-size:15px;font-family:inherit;transition:.15s}
+.login-field input:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 3px rgba(26,58,92,.12)}
+.btn-login{width:100%;background:var(--navy2);color:#fff;border:none;border-radius:var(--radius-sm);padding:13px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;margin-top:.5rem}
+.btn-login:hover{background:var(--navy)}
+.btn-login:disabled{opacity:.6;cursor:not-allowed}
+.login-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;margin-bottom:1rem;display:none}
+.login-note{text-align:center;font-size:12px;color:var(--text3);margin-top:1rem}
 
-  .section{background:#f8fafd;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;margin-bottom:1rem}
-  .section-title{font-size:12px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:1rem;display:flex;align-items:center;gap:6px}
+/* ── Layout ── */
+.container{max-width:960px;margin:0 auto;padding:2rem 1.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card-header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.card-header-left{display:flex;align-items:center;gap:10px}
+.card-header h2{font-size:17px;font-weight:600}
+.card-header .sub{font-size:13px;opacity:.7;margin-top:2px}
+.card-body{padding:1.5rem}
 
-  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-  .row4{display:grid;grid-template-columns:.75fr 1fr 1fr .9fr;gap:10px}
-  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
-  .field:last-child{margin-bottom:0}
-  label.lbl{font-size:13px;font-weight:600;color:var(--text2)}
-  .req{color:var(--red)}
-  input,select,textarea{border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--text);transition:.15s;width:100%}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 3px rgba(26,58,92,.1)}
-  textarea{resize:vertical;min-height:64px}
-  .plate{font-family:monospace;letter-spacing:1.5px;font-weight:600}
+/* ── Form sections ── */
+.section{background:#f8fafd;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;margin-bottom:1rem}
+.section-title{font-size:12px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:1rem}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row4{display:grid;grid-template-columns:.75fr 1fr 1fr .9fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+label.lbl{font-size:13px;font-weight:600;color:var(--text2)}
+.req{color:var(--red)}
+input,select,textarea{border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--text);transition:.15s;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 3px rgba(26,58,92,.1)}
+textarea{resize:vertical;min-height:64px}
+.plate{font-family:monospace;letter-spacing:1.5px;font-weight:600}
 
-  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:14px;font-family:inherit;font-weight:600;transition:.15s}
-  .btn-primary{background:var(--navy2);color:#fff}.btn-primary:hover{background:var(--navy)}
-  .btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#145c32}
-  .btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#991b1b}
-  .btn-outline{background:#fff;color:var(--text2);border:1px solid var(--border2)}.btn-outline:hover{border-color:var(--navy2);color:var(--navy2)}
-  .btn-sm{padding:5px 12px;font-size:13px}
-  .btn-full{width:100%;justify-content:center;padding:12px}
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:14px;font-family:inherit;font-weight:600;transition:.15s}
+.btn-primary{background:var(--navy2);color:#fff}.btn-primary:hover{background:var(--navy)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#145c32}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#991b1b}
+.btn-outline{background:#fff;color:var(--text2);border:1px solid var(--border2)}.btn-outline:hover{border-color:var(--navy2);color:var(--navy2)}
+.btn-gold{background:var(--gold);color:#fff;border:none}.btn-gold:hover{background:#b8973e}
+.btn-sm{padding:5px 12px;font-size:13px}
+.btn-full{width:100%;justify-content:center;padding:12px}
 
-  .member-card,.vehicle-card{background:#fff;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:1rem;margin-bottom:8px}
-  .sub-badge{font-size:12px;font-weight:700;color:var(--navy2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+/* ── List toolbar ── */
+.list-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+.search-input{flex:1;min-width:200px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 14px;font-size:14px;font-family:inherit}
+.sort-select{border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 12px;font-size:14px;font-family:inherit;background:#fff;cursor:pointer}
 
-  .tbl-wrap{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th{background:#f0f4fa;padding:10px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)}
-  td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
-  tr:last-child td{border-bottom:none}
-  tr:hover td{background:#f8fafd}
-  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:700}
-  .badge-navy{background:#dde8f5;color:var(--navy2)}
-  .badge-gold{background:#fdf3dc;color:#8b6914}
-  .badge-green{background:#dcf5e8;color:var(--green)}
-  .empty-state{text-align:center;padding:3rem 1rem;color:var(--text3)}
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:#f0f4fa;padding:10px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#e4ecf8}
+th .sort-icon{margin-left:4px;opacity:.4}
+th.sorted .sort-icon{opacity:1}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafd}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:700}
+.badge-navy{background:#dde8f5;color:var(--navy2)}
+.badge-gold{background:#fdf3dc;color:#8b6914}
+.badge-green{background:#dcf5e8;color:var(--green)}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text3)}
 
-  .alert{padding:12px 16px;border-radius:var(--radius-sm);font-size:14px;margin-bottom:1rem;display:none}
-  .alert-success{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
-  .alert-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
+/* ── Alerts ── */
+.alert{padding:12px 16px;border-radius:var(--radius-sm);font-size:14px;margin-bottom:1rem;display:none}
+.alert-success{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
+.alert-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
 
-  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
-  .modal-bg.show{display:flex}
-  .modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:1.5rem}
-  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
-  .modal-header h3{font-size:17px;font-weight:700;color:var(--navy)}
-  .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3)}
-  .modal-sec{margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
-  .modal-sec:last-child{border-bottom:none;margin-bottom:0}
-  .modal-sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy2);margin-bottom:8px}
-  .dr{display:flex;gap:8px;margin-bottom:5px;font-size:14px}
-  .dr .dl{color:var(--text2);min-width:150px;flex-shrink:0;font-weight:500}
-  .chip{display:inline-block;background:#f0f4fa;border:1px solid var(--border);border-radius:4px;padding:2px 10px;font-size:13px;margin:2px;font-family:monospace;font-weight:600}
+/* ── Dynamic cards ── */
+.member-card,.vehicle-card{background:#fff;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:1rem;margin-bottom:8px}
+.sub-badge{font-size:12px;font-weight:700;color:var(--navy2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.plate-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-  .loader{display:none;text-align:center;padding:2rem;color:var(--text3)}
-  .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--navy2);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
-  @keyframes spin{to{transform:rotate(360deg)}}
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);width:100%;max-width:580px;max-height:90vh;overflow-y:auto;padding:1.5rem}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.modal-header h3{font-size:17px;font-weight:700;color:var(--navy)}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3)}
+.modal-sec{margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.modal-sec:last-child{border-bottom:none;margin-bottom:0}
+.modal-sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy2);margin-bottom:8px}
+.dr{display:flex;gap:8px;margin-bottom:5px;font-size:14px}
+.dr .dl{color:var(--text2);min-width:160px;flex-shrink:0;font-weight:500}
+.chip{display:inline-block;background:#f0f4fa;border:1px solid var(--border);border-radius:4px;padding:2px 10px;font-size:13px;margin:2px;font-family:monospace;font-weight:600}
 
-  hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
-  .count-row{display:flex;align-items:center;gap:10px}
-  .count-row input{width:80px}
-  .count-note{font-size:13px;color:var(--text3)}
-  .plate-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* ── Loader ── */
+.loader{display:none;text-align:center;padding:2rem;color:var(--text3)}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--navy2);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-  @media(max-width:640px){
-    .row2,.row3,.row4,.plate-row{grid-template-columns:1fr}
-    .container{padding:1rem}
-    .topbar{padding:0 1rem}
-  }
+hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
+.count-row{display:flex;align-items:center;gap:10px}
+.count-row input{width:80px}
+.count-note{font-size:13px;color:var(--text3)}
+
+@media(max-width:640px){
+  .row2,.row4,.plate-row{grid-template-columns:1fr}
+  .container{padding:1rem}
+  .topbar{padding:0 1rem}
+  .list-toolbar{flex-direction:column;align-items:stretch}
+}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="emblem">★</div>
-    <div>ระบบสำรวจผู้พักอาศัย — แฟลต 2</div>
-  </div>
-  <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('form')">กรอกข้อมูล</button>
-    <button class="nav-tab" onclick="showPage('list')">รายการทั้งหมด</button>
-  </div>
-</div>
-
-<!-- ═══ FORM PAGE ═══ -->
-<div id="page-form" class="container">
-  <div id="alert-form" class="alert"></div>
-  <div class="card">
-    <div class="card-header">
-      <div class="card-header-left">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        <div><h2>แบบสำรวจข้อมูลผู้พักอาศัย</h2><div class="sub">กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง</div></div>
-      </div>
+<!-- ═══ LOGIN PAGE ═══ -->
+<div id="page-login" class="login-bg">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-emblem">★</div>
+      <h1>ระบบสำรวจผู้พักอาศัย</h1>
+      <p>แฟลต 2 — กรุณาเข้าสู่ระบบเพื่อดูรายการข้อมูล</p>
     </div>
-    <div class="card-body">
-      <form id="survey-form" onsubmit="submitForm(event)">
-        <input type="hidden" id="edit-id">
-
-        <!-- ส่วนที่ 1: ข้อมูลส่วนตัว -->
-        <div class="section">
-          <div class="section-title">👤 ข้อมูลส่วนตัว</div>
-          <div class="row2" style="margin-bottom:10px">
-            <div class="field">
-              <label class="lbl">ยศ <span class="req">*</span></label>
-              <select id="f-rank" required>
-                <option value="">— เลือกยศ —</option>
-                <option>ส.ต.</option><option>ส.ท.</option><option>ส.อ.</option>
-                <option>จ.ส.ต.</option><option>จ.ส.ท.</option><option>จ.ส.อ.</option>
-                <option>ร.ต.</option><option>ร.ท.</option><option>ร.อ.</option>
-              </select>
-            </div>
-            <div class="field">
-              <label class="lbl">ตำแหน่ง</label>
-              <input type="text" id="f-position" placeholder="เช่น ผู้บังคับหมู่">
-            </div>
-          </div>
-          <div class="row2">
-            <div class="field"><label class="lbl">ชื่อ <span class="req">*</span></label><input type="text" id="f-fname" placeholder="ชื่อ" required></div>
-            <div class="field"><label class="lbl">นามสกุล <span class="req">*</span></label><input type="text" id="f-lname" placeholder="นามสกุล" required></div>
-          </div>
-          <div class="row2">
-            <div class="field"><label class="lbl">วัน/เดือน/ปีเกิด</label><input type="date" id="f-birthdate"></div>
-            <div class="field"><label class="lbl">หมายเลขโทรศัพท์</label><input type="tel" id="f-phone" placeholder="เช่น 081-234-5678"></div>
-          </div>
-          <div class="field"><label class="lbl">ที่อยู่ตามบัตรประชาชน</label><textarea id="f-id-address" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"></textarea></div>
-        </div>
-
-        <!-- ส่วนที่ 2: ที่พัก -->
-        <div class="section">
-          <div class="section-title">🏠 ข้อมูลที่พัก</div>
-          <div class="row2">
-            <div class="field"><label class="lbl">ห้องที่ <span class="req">*</span></label><input type="text" id="f-room" placeholder="เช่น 101" required></div>
-            <div class="field"><label class="lbl">ชั้นที่ <span class="req">*</span></label><input type="number" id="f-floor" placeholder="เช่น 1" min="1" required></div>
-          </div>
-        </div>
-
-        <!-- ส่วนที่ 3: ครอบครัว -->
-        <div class="section">
-          <div class="section-title">👨‍👩‍👧 ข้อมูลครอบครัว</div>
-          <div class="field" style="margin-bottom:12px">
-            <label class="lbl">หัวหน้าครอบครัว</label>
-            <div style="display:flex;gap:8px">
-              <select id="f-head-sel" onchange="toggleHead()" style="flex:1">
-                <option value="self">ตนเอง</option>
-                <option value="other">อื่นๆ โปรดระบุ</option>
-              </select>
-              <input type="text" id="f-head-other" placeholder="ระบุชื่อหัวหน้าครอบครัว" style="flex:1.5;display:none">
-            </div>
-          </div>
-          <hr class="div">
-          <div class="field" style="margin-bottom:12px">
-            <label class="lbl">จำนวนผู้พักอาศัย (ไม่นับตัวเอง)</label>
-            <div class="count-row">
-              <input type="number" id="f-resident-count" min="0" value="0" onchange="updateMembers(+this.value)">
-              <span class="count-note">คน</span>
-            </div>
-          </div>
-          <div id="members-wrap"></div>
-        </div>
-
-        <!-- ส่วนที่ 4: ยานพาหนะ -->
-        <div class="section">
-          <div class="section-title">🚗 ยานพาหนะ</div>
-          <div class="field" style="margin-bottom:1rem">
-            <label class="lbl">จำนวนรถยนต์</label>
-            <div class="count-row">
-              <input type="number" id="f-car-count" min="0" value="0" onchange="updateVehicles('car',+this.value)">
-              <span class="count-note">คัน</span>
-            </div>
-          </div>
-          <div id="cars-wrap"></div>
-          <hr class="div">
-          <div class="field" style="margin-bottom:1rem">
-            <label class="lbl">จำนวนรถจักรยานยนต์</label>
-            <div class="count-row">
-              <input type="number" id="f-moto-count" min="0" value="0" onchange="updateVehicles('moto',+this.value)">
-              <span class="count-note">คัน</span>
-            </div>
-          </div>
-          <div id="motos-wrap"></div>
-        </div>
-
-        <div style="display:flex;gap:10px;margin-top:1.25rem">
-          <button type="submit" class="btn btn-success btn-full" id="btn-submit">✓ บันทึกข้อมูล</button>
-          <button type="button" class="btn btn-outline" onclick="resetForm()" style="min-width:120px;justify-content:center">ล้างข้อมูล</button>
-        </div>
-      </form>
+    <div class="login-body">
+      <div class="login-error" id="login-error"></div>
+      <div class="login-field">
+        <label>ชื่อผู้ใช้</label>
+        <input type="text" id="l-user" placeholder="กรอกชื่อผู้ใช้" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>รหัสผ่าน</label>
+        <input type="password" id="l-pass" placeholder="กรอกรหัสผ่าน" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-login" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
+      <div class="login-note">หน้ากรอกแบบสำรวจไม่ต้องเข้าสู่ระบบ</div>
     </div>
   </div>
 </div>
 
-<!-- ═══ LIST PAGE ═══ -->
-<div id="page-list" class="container" style="display:none">
-  <div id="alert-list" class="alert"></div>
-  <div class="card">
-    <div class="card-header">
-      <div class="card-header-left">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-        <div><h2>รายการผู้พักอาศัยทั้งหมด</h2><div class="sub" id="total-count">—</div></div>
-      </div>
-      <button class="btn btn-outline btn-sm" onclick="loadList()" style="color:#fff;border-color:rgba(255,255,255,.4)">↻ รีเฟรช</button>
+<!-- ═══ MAIN APP ═══ -->
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="emblem">★</div>
+      <div>ระบบสำรวจผู้พักอาศัย — แฟลต 2</div>
     </div>
-    <div class="card-body">
-      <div class="loader" id="list-loader"><div class="spinner"></div>กำลังโหลด...</div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th>#</th><th>ยศ / ชื่อ-นามสกุล</th><th>ห้อง/ชั้น</th>
-            <th>โทรศัพท์</th><th>สมาชิก</th><th>รถยนต์</th><th>มอเตอร์ไซค์</th><th>จัดการ</th>
-          </tr></thead>
-          <tbody id="list-body"><tr><td colspan="8"><div class="empty-state">กำลังโหลด...</div></td></tr></tbody>
-        </table>
+    <div class="topbar-right">
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showPage('form')">กรอกข้อมูล</button>
+        <button class="nav-tab" onclick="showPage('list')">รายการทั้งหมด</button>
+      </div>
+      <div class="user-chip">👤 <span id="username-display"></span></div>
+      <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <!-- ═══ FORM PAGE ═══ -->
+  <div id="page-form" class="container">
+    <div id="alert-form" class="alert"></div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <div><h2>แบบสำรวจข้อมูลผู้พักอาศัย</h2><div class="sub">กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง</div></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <form id="survey-form" onsubmit="submitForm(event)">
+          <input type="hidden" id="edit-id">
+
+          <div class="section">
+            <div class="section-title">👤 ข้อมูลส่วนตัว</div>
+            <div class="row2" style="margin-bottom:10px">
+              <div class="field">
+                <label class="lbl">ยศ <span class="req">*</span></label>
+                <select id="f-rank" required>
+                  <option value="">— เลือกยศ —</option>
+                  <option>ส.ต.</option><option>ส.ท.</option><option>ส.อ.</option>
+                  <option>จ.ส.ต.</option><option>จ.ส.ท.</option><option>จ.ส.อ.</option>
+                  <option>ร.ต.</option><option>ร.ท.</option><option>ร.อ.</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="lbl">ตำแหน่ง</label>
+                <input type="text" id="f-position" placeholder="เช่น ผู้บังคับหมู่">
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field"><label class="lbl">ชื่อ <span class="req">*</span></label><input type="text" id="f-fname" placeholder="ชื่อ" required></div>
+              <div class="field"><label class="lbl">นามสกุล <span class="req">*</span></label><input type="text" id="f-lname" placeholder="นามสกุล" required></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label class="lbl">วัน/เดือน/ปีเกิด</label><input type="date" id="f-birthdate"></div>
+              <div class="field"><label class="lbl">หมายเลขโทรศัพท์</label><input type="tel" id="f-phone" placeholder="เช่น 081-234-5678"></div>
+            </div>
+            <div class="field"><label class="lbl">ที่อยู่ตามบัตรประชาชน</label><textarea id="f-id-address" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"></textarea></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🏠 ข้อมูลที่พัก</div>
+            <div class="row2">
+              <div class="field"><label class="lbl">ห้องที่ <span class="req">*</span></label><input type="text" id="f-room" placeholder="เช่น 101" required></div>
+              <div class="field"><label class="lbl">ชั้นที่ <span class="req">*</span></label><input type="number" id="f-floor" placeholder="เช่น 1" min="1" required></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">👨‍👩‍👧 ข้อมูลครอบครัว</div>
+            <div class="field" style="margin-bottom:12px">
+              <label class="lbl">หัวหน้าครอบครัว</label>
+              <div style="display:flex;gap:8px">
+                <select id="f-head-sel" onchange="toggleHead()" style="flex:1">
+                  <option value="self">ตนเอง</option>
+                  <option value="other">อื่นๆ โปรดระบุ</option>
+                </select>
+                <input type="text" id="f-head-other" placeholder="ระบุชื่อหัวหน้าครอบครัว" style="flex:1.5;display:none">
+              </div>
+            </div>
+            <hr class="div">
+            <div class="field" style="margin-bottom:12px">
+              <label class="lbl">จำนวนผู้พักอาศัย (ไม่นับตัวเอง)</label>
+              <div class="count-row">
+                <input type="number" id="f-resident-count" min="0" value="0" onchange="updateMembers(+this.value)">
+                <span class="count-note">คน</span>
+              </div>
+            </div>
+            <div id="members-wrap"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🚗 ยานพาหนะ</div>
+            <div class="field" style="margin-bottom:1rem">
+              <label class="lbl">จำนวนรถยนต์</label>
+              <div class="count-row">
+                <input type="number" id="f-car-count" min="0" value="0" onchange="updateVehicles('car',+this.value)">
+                <span class="count-note">คัน</span>
+              </div>
+            </div>
+            <div id="cars-wrap"></div>
+            <hr class="div">
+            <div class="field" style="margin-bottom:1rem">
+              <label class="lbl">จำนวนรถจักรยานยนต์</label>
+              <div class="count-row">
+                <input type="number" id="f-moto-count" min="0" value="0" onchange="updateVehicles('moto',+this.value)">
+                <span class="count-note">คัน</span>
+              </div>
+            </div>
+            <div id="motos-wrap"></div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:1.25rem">
+            <button type="submit" class="btn btn-success btn-full" id="btn-submit">✓ บันทึกข้อมูล</button>
+            <button type="button" class="btn btn-outline" onclick="resetForm()" style="min-width:120px;justify-content:center">ล้างข้อมูล</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LIST PAGE ═══ -->
+  <div id="page-list" class="container" style="display:none">
+    <div id="alert-list" class="alert"></div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <div><h2>รายการผู้พักอาศัยทั้งหมด</h2><div class="sub" id="total-count">—</div></div>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
+      </div>
+      <div class="card-body">
+        <div class="list-toolbar">
+          <input type="text" class="search-input" id="search-input" placeholder="🔍 ค้นหา ชื่อ ยศ ตำแหน่ง ห้อง..." oninput="debounceSearch()">
+          <select class="sort-select" id="sort-select" onchange="loadList()">
+            <option value="created">เรียงตาม: วันที่บันทึก</option>
+            <option value="rank">เรียงตาม: ยศ</option>
+            <option value="name">เรียงตาม: ชื่อ</option>
+            <option value="floor">เรียงตาม: ชั้น</option>
+          </select>
+          <select class="sort-select" id="order-select" onchange="loadList()">
+            <option value="desc">มากไปน้อย</option>
+            <option value="asc">น้อยไปมาก</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="loadList()">↻ รีเฟรช</button>
+        </div>
+        <div class="loader" id="list-loader"><div class="spinner"></div>กำลังโหลด...</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th>
+              <th onclick="sortBy('rank')">ยศ / ตำแหน่ง <span class="sort-icon">⇅</span></th>
+              <th onclick="sortBy('name')">ชื่อ-นามสกุล <span class="sort-icon">⇅</span></th>
+              <th onclick="sortBy('floor')">ห้อง/ชั้น <span class="sort-icon">⇅</span></th>
+              <th>โทรศัพท์</th>
+              <th>สมาชิก</th>
+              <th>รถยนต์</th>
+              <th>มอเตอร์ไซค์</th>
+              <th>จัดการ</th>
+            </tr></thead>
+            <tbody id="list-body"><tr><td colspan="9"><div class="empty-state">กำลังโหลด...</div></td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -267,37 +355,197 @@
 <script>
 const API = '/api/surveys';
 const PFX = ['นาย','นาง','นางสาว','เด็กชาย','เด็กหญิง'];
+let TOKEN = localStorage.getItem('auth_token') || '';
+let searchTimer = null;
 
-function showPage(p){
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
+function authHeaders() {
+  return { 'Content-Type':'application/json', 'Authorization': `Bearer ${TOKEN}` };
+}
+
+async function checkAuth() {
+  if (!TOKEN) { showLogin(); return; }
+  try {
+    const res = await fetch('/api/auth/me', { headers: authHeaders() });
+    const json = await res.json();
+    if (json.success) {
+      document.getElementById('username-display').textContent = json.username;
+      showApp();
+    } else { showLogin(); }
+  } catch { showLogin(); }
+}
+
+function showLogin() {
+  document.getElementById('page-login').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('page-login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+async function doLogin() {
+  const username = document.getElementById('l-user').value.trim();
+  const password = document.getElementById('l-pass').value;
+  const btn = document.getElementById('btn-login');
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if (!username || !password) { errEl.textContent='กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'; errEl.style.display='block'; return; }
+  btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
+  try {
+    const res = await fetch('/api/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password })
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    TOKEN = json.token;
+    localStorage.setItem('auth_token', TOKEN);
+    document.getElementById('username-display').textContent = json.username;
+    showApp();
+    showPage('list');
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+  }
+}
+
+async function doLogout() {
+  await fetch('/api/auth/logout', { method:'POST', headers: authHeaders() }).catch(()=>{});
+  TOKEN = ''; localStorage.removeItem('auth_token');
+  showLogin();
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function showPage(p) {
   document.getElementById('page-form').style.display = p==='form'?'block':'none';
   document.getElementById('page-list').style.display = p==='list'?'block':'none';
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===(p==='form'?0:1)));
-  if(p==='list') loadList();
+  if (p==='list') loadList();
 }
 
-function showAlert(id, msg, type='success'){
-  const el=document.getElementById(id);
-  el.className=`alert alert-${type}`;
-  el.innerHTML=msg;
-  el.style.display='block';
-  setTimeout(()=>el.style.display='none',4000);
+function showAlert(id, msg, type='success') {
+  const el = document.getElementById(id);
+  el.className = `alert alert-${type}`;
+  el.innerHTML = msg; el.style.display = 'block';
+  setTimeout(()=>el.style.display='none', 4000);
 }
 
-function toggleHead(){
-  const v=document.getElementById('f-head-sel').value;
-  document.getElementById('f-head-other').style.display=v==='other'?'block':'none';
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return isNaN(dt) ? d : dt.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
 }
 
-function fmtDate(d){ if(!d) return '—'; const dt=new Date(d); return isNaN(dt)?d:dt.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}); }
+// ─── Sort ─────────────────────────────────────────────────────────────────────
+function sortBy(col) {
+  const sel = document.getElementById('sort-select');
+  const ord = document.getElementById('order-select');
+  if (sel.value === col) { ord.value = ord.value==='asc'?'desc':'asc'; }
+  else { sel.value = col; ord.value = 'asc'; }
+  loadList();
+}
 
-// ─── Dynamic members ──────────────────────────────────────────────────────────
-function updateMembers(n){
-  n=Math.max(0,n);
-  const w=document.getElementById('members-wrap');
-  w.innerHTML='';
-  if(!n) return;
-  for(let i=1;i<=n;i++){
-    const d=document.createElement('div');
+// ─── Search ───────────────────────────────────────────────────────────────────
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadList, 400);
+}
+
+// ─── Load list ────────────────────────────────────────────────────────────────
+async function loadList() {
+  document.getElementById('list-loader').style.display='block';
+  document.getElementById('list-body').innerHTML='';
+  const search = document.getElementById('search-input').value;
+  const sort   = document.getElementById('sort-select').value;
+  const order  = document.getElementById('order-select').value;
+  try {
+    const res = await fetch(`${API}?search=${encodeURIComponent(search)}&sort=${sort}&order=${order}`, { headers: authHeaders() });
+    if (res.status===401) { doLogout(); return; }
+    const json = await res.json();
+    renderList(json.data||[]);
+  } catch (err) {
+    document.getElementById('list-body').innerHTML=`<tr><td colspan="9"><div class="empty-state">⚠️ ${err.message}</div></td></tr>`;
+  } finally {
+    document.getElementById('list-loader').style.display='none';
+  }
+}
+
+function renderList(rows) {
+  document.getElementById('total-count').textContent=`รายการทั้งหมด ${rows.length} ราย`;
+  if (!rows.length) {
+    document.getElementById('list-body').innerHTML=`<tr><td colspan="9"><div class="empty-state">ไม่พบข้อมูล</div></td></tr>`;
+    return;
+  }
+  document.getElementById('list-body').innerHTML=rows.map((r,i)=>`
+    <tr>
+      <td><span class="badge badge-navy">${i+1}</span></td>
+      <td><strong>${r.rank}</strong>${r.position?`<br><span style="font-size:12px;color:var(--text3)">${r.position}</span>`:''}</td>
+      <td>${r.first_name} ${r.last_name}</td>
+      <td>ห้อง <strong>${r.room_number}</strong> ชั้น ${r.floor_number}</td>
+      <td style="font-size:13px">${r.phone||'—'}</td>
+      <td>${r.family_count>0?`<span class="badge badge-gold">${r.family_count} คน</span>`:'—'}</td>
+      <td>${r.car_count>0?`<span class="badge badge-green">${r.car_count} คัน</span>`:'—'}</td>
+      <td>${r.moto_count>0?`<span class="badge badge-green">${r.moto_count} คัน</span>`:'—'}</td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="viewDetail(${r.id})">ดู</button>
+          <button class="btn btn-primary btn-sm" onclick="editRecord(${r.id})">แก้ไข</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRecord(${r.id})">ลบ</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// ─── Export Excel ─────────────────────────────────────────────────────────────
+async function exportExcel() {
+  try {
+    const res = await fetch(`${API}/export`, { headers: authHeaders() });
+    if (res.status===401) { doLogout(); return; }
+    const json = await res.json();
+    const data = json.data.map((r,i) => ({
+      'ลำดับ': i+1,
+      'ยศ': r.rank,
+      'ตำแหน่ง': r.position||'',
+      'ชื่อ': r.first_name,
+      'นามสกุล': r.last_name,
+      'วันเกิด': r.birthdate ? new Date(r.birthdate).toLocaleDateString('th-TH') : '',
+      'ห้อง': r.room_number,
+      'ชั้น': r.floor_number,
+      'โทรศัพท์': r.phone||'',
+      'ที่อยู่ตามบัตรฯ': r.id_card_address||'',
+      'หัวหน้าครอบครัว': r.family_head==='self'?'ตนเอง':r.family_head,
+      'จำนวนผู้พักอาศัย': r.resident_count,
+      'วันที่บันทึก': new Date(r.created_at).toLocaleDateString('th-TH'),
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'ผู้พักอาศัย');
+    const today = new Date().toLocaleDateString('th-TH').replace(/\//g,'-');
+    XLSX.writeFile(wb, `survey_flat2_${today}.xlsx`);
+  } catch (err) {
+    showAlert('alert-list','✗ Export ไม่สำเร็จ: '+err.message,'error');
+  }
+}
+
+// ─── Form helpers ─────────────────────────────────────────────────────────────
+function toggleHead() {
+  const v = document.getElementById('f-head-sel').value;
+  document.getElementById('f-head-other').style.display = v==='other'?'block':'none';
+}
+
+function updateMembers(n) {
+  n = Math.max(0,n);
+  const w = document.getElementById('members-wrap');
+  w.innerHTML = '';
+  if (!n) return;
+  for (let i=1;i<=n;i++) {
+    const d = document.createElement('div');
     d.className='member-card';
     d.innerHTML=`
       <div class="sub-badge">ผู้พักอาศัยคนที่ ${i}</div>
@@ -312,19 +560,18 @@ function updateMembers(n){
         <div class="field"><label class="lbl">วัน/เดือน/ปีเกิด</label><input type="date" id="m${i}-bd"></div>
         <div class="field"><label class="lbl">หมายเลขโทรศัพท์</label><input type="tel" id="m${i}-phone" placeholder="เช่น 081-234-5678"></div>
       </div>
-      <div class="field"><label class="lbl">ที่อยู่ตามบัตรประชาชน</label><textarea id="m${i}-idaddr" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"></textarea></div>
+      <div class="field"><label class="lbl">ที่อยู่ตามบัตรประชาชน</label><textarea id="m${i}-idaddr" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด"></textarea></div>
       <div class="field"><label class="lbl">ที่อยู่สถานที่ทำงาน</label><textarea id="m${i}-workaddr" placeholder="ชื่อสถานที่ทำงาน ที่อยู่"></textarea></div>`;
     w.appendChild(d);
   }
 }
 
-// ─── Dynamic vehicles ─────────────────────────────────────────────────────────
-function updateVehicles(kind, n){
-  const wrap=document.getElementById(kind==='car'?'cars-wrap':'motos-wrap');
-  const label=kind==='car'?'รถยนต์':'รถจักรยานยนต์';
-  const px=kind==='car'?'c':'mo';
+function updateVehicles(kind, n) {
+  const wrap = document.getElementById(kind==='car'?'cars-wrap':'motos-wrap');
+  const label = kind==='car'?'รถยนต์':'รถจักรยานยนต์';
+  const px = kind==='car'?'c':'mo';
   wrap.innerHTML='';
-  for(let i=1;i<=n;i++){
+  for (let i=1;i<=n;i++) {
     const d=document.createElement('div');
     d.className='vehicle-card';
     d.innerHTML=`
@@ -334,22 +581,20 @@ function updateVehicles(kind, n){
         <div class="field"><label class="lbl">จังหวัด</label><input type="text" id="${px}${i}-prov" placeholder="เช่น กรุงเทพมหานคร"></div>
       </div>
       <div class="row2">
-        <div class="field"><label class="lbl">ยี่ห้อ</label><input type="text" id="${px}${i}-brand" placeholder="เช่น Toyota, Honda"></div>
-        <div class="field"><label class="lbl">สี</label><input type="text" id="${px}${i}-color" placeholder="เช่น ขาว, ดำ, แดง"></div>
+        <div class="field"><label class="lbl">ยี่ห้อ</label><input type="text" id="${px}${i}-brand" placeholder="เช่น Toyota"></div>
+        <div class="field"><label class="lbl">สี</label><input type="text" id="${px}${i}-color" placeholder="เช่น ขาว"></div>
       </div>`;
     wrap.appendChild(d);
   }
 }
 
-// ─── Collect data ─────────────────────────────────────────────────────────────
-function collectData(){
+function collectData() {
   const resCount=+document.getElementById('f-resident-count').value||0;
   const carCount=+document.getElementById('f-car-count').value||0;
   const motoCount=+document.getElementById('f-moto-count').value||0;
   const headSel=document.getElementById('f-head-sel').value;
-
   const family_members=[];
-  for(let i=1;i<=resCount;i++){
+  for (let i=1;i<=resCount;i++) {
     family_members.push({
       prefix:   document.getElementById(`m${i}-pfx`).value,
       first_name:document.getElementById(`m${i}-fn`).value.trim(),
@@ -361,30 +606,16 @@ function collectData(){
       work_address:   document.getElementById(`m${i}-workaddr`).value.trim()||null,
     });
   }
-
   const vehicles=[];
-  for(let i=1;i<=carCount;i++){
-    const plate=document.getElementById(`c${i}-plate`);
-    if(plate) vehicles.push({
-      type:'car',
-      plate_number:   plate.value.trim(),
-      plate_province: document.getElementById(`c${i}-prov`).value.trim()||null,
-      brand:          document.getElementById(`c${i}-brand`).value.trim()||null,
-      color:          document.getElementById(`c${i}-color`).value.trim()||null,
-    });
+  for (let i=1;i<=carCount;i++) {
+    const p=document.getElementById(`c${i}-plate`);
+    if(p) vehicles.push({type:'car',plate_number:p.value.trim(),plate_province:document.getElementById(`c${i}-prov`).value.trim()||null,brand:document.getElementById(`c${i}-brand`).value.trim()||null,color:document.getElementById(`c${i}-color`).value.trim()||null});
   }
-  for(let i=1;i<=motoCount;i++){
-    const plate=document.getElementById(`mo${i}-plate`);
-    if(plate) vehicles.push({
-      type:'motorcycle',
-      plate_number:   plate.value.trim(),
-      plate_province: document.getElementById(`mo${i}-prov`).value.trim()||null,
-      brand:          document.getElementById(`mo${i}-brand`).value.trim()||null,
-      color:          document.getElementById(`mo${i}-color`).value.trim()||null,
-    });
+  for (let i=1;i<=motoCount;i++) {
+    const p=document.getElementById(`mo${i}-plate`);
+    if(p) vehicles.push({type:'motorcycle',plate_number:p.value.trim(),plate_province:document.getElementById(`mo${i}-prov`).value.trim()||null,brand:document.getElementById(`mo${i}-brand`).value.trim()||null,color:document.getElementById(`mo${i}-color`).value.trim()||null});
   }
-
-  return{
+  return {
     rank:            document.getElementById('f-rank').value,
     position:        document.getElementById('f-position').value.trim()||null,
     first_name:      document.getElementById('f-fname').value.trim(),
@@ -399,29 +630,29 @@ function collectData(){
   };
 }
 
-// ─── Submit ───────────────────────────────────────────────────────────────────
-async function submitForm(e){
+async function submitForm(e) {
   e.preventDefault();
-  const data=collectData();
-  const editId=document.getElementById('edit-id').value;
-  const btn=document.getElementById('btn-submit');
+  const data = collectData();
+  const editId = document.getElementById('edit-id').value;
+  const btn = document.getElementById('btn-submit');
   btn.disabled=true; btn.textContent='กำลังบันทึก...';
-  try{
-    const method=editId?'PUT':'POST';
-    const url=editId?`${API}/${editId}`:API;
-    const res=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    const json=await res.json();
-    if(!res.ok) throw new Error(json.error||'เกิดข้อผิดพลาด');
+  try {
+    const method = editId?'PUT':'POST';
+    const url = editId?`${API}/${editId}`:API;
+    const headers = editId ? authHeaders() : {'Content-Type':'application/json'};
+    const res = await fetch(url,{method,headers,body:JSON.stringify(data)});
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error||'เกิดข้อผิดพลาด');
     showAlert('alert-form','✓ '+json.message);
     resetForm();
-  }catch(err){
+  } catch(err) {
     showAlert('alert-form','✗ '+err.message,'error');
-  }finally{
+  } finally {
     btn.disabled=false; btn.textContent='✓ บันทึกข้อมูล';
   }
 }
 
-function resetForm(){
+function resetForm() {
   document.getElementById('survey-form').reset();
   document.getElementById('edit-id').value='';
   document.getElementById('members-wrap').innerHTML='';
@@ -431,53 +662,11 @@ function resetForm(){
   document.getElementById('btn-submit').textContent='✓ บันทึกข้อมูล';
 }
 
-// ─── List ─────────────────────────────────────────────────────────────────────
-async function loadList(){
-  document.getElementById('list-loader').style.display='block';
-  document.getElementById('list-body').innerHTML='';
-  try{
-    const res=await fetch(API);
-    const json=await res.json();
-    renderList(json.data||[]);
-  }catch(err){
-    document.getElementById('list-body').innerHTML=`<tr><td colspan="8"><div class="empty-state">⚠️ ${err.message}</div></td></tr>`;
-  }finally{
-    document.getElementById('list-loader').style.display='none';
-  }
-}
-
-function renderList(rows){
-  document.getElementById('total-count').textContent=`รายการทั้งหมด ${rows.length} ราย`;
-  if(!rows.length){
-    document.getElementById('list-body').innerHTML=`<tr><td colspan="8"><div class="empty-state">ยังไม่มีข้อมูล</div></td></tr>`;
-    return;
-  }
-  document.getElementById('list-body').innerHTML=rows.map((r,i)=>`
-    <tr>
-      <td><span class="badge badge-navy">${i+1}</span></td>
-      <td><strong>${r.rank}</strong> ${r.first_name} ${r.last_name}${r.position?'<br><span style="font-size:12px;color:var(--text3)">'+r.position+'</span>':''}</td>
-      <td>ห้อง <strong>${r.room_number}</strong> ชั้น ${r.floor_number}</td>
-      <td style="font-size:13px">${r.phone||'—'}</td>
-      <td>${r.family_count>0?`<span class="badge badge-gold">${r.family_count} คน</span>`:'—'}</td>
-      <td>${r.car_count>0?`<span class="badge badge-green">${r.car_count} คัน</span>`:'—'}</td>
-      <td>${r.moto_count>0?`<span class="badge badge-green">${r.moto_count} คัน</span>`:'—'}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-outline btn-sm" onclick="viewDetail(${r.id})">ดูข้อมูล</button>
-          <button class="btn btn-primary btn-sm" onclick="editRecord(${r.id})">แก้ไข</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteRecord(${r.id})">ลบ</button>
-        </div>
-      </td>
-    </tr>`).join('');
-}
-
-// ─── View detail ──────────────────────────────────────────────────────────────
-async function viewDetail(id){
-  const res=await fetch(`${API}/${id}`);
+async function viewDetail(id) {
+  const res=await fetch(`${API}/${id}`,{headers:authHeaders()});
   const {data:r}=await res.json();
   const cars=r.vehicles.filter(v=>v.type==='car');
   const motos=r.vehicles.filter(v=>v.type==='motorcycle');
-
   document.getElementById('modal-title').textContent=`${r.rank} ${r.first_name} ${r.last_name}`;
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-sec">
@@ -503,30 +692,17 @@ async function viewDetail(id){
           <div class="dr"><span class="dl">ที่อยู่ที่ทำงาน</span><span style="white-space:pre-line">${m.work_address||'—'}</span></div>
         </div>`).join('')}
     </div>`:''}
-    ${cars.length?`
-    <div class="modal-sec">
-      <div class="modal-sec-title">รถยนต์ (${cars.length} คัน)</div>
-      ${cars.map(v=>`
-        <div class="dr">
-          <span class="dl"><span class="chip">${v.plate_number}${v.plate_province?' '+v.plate_province:''}</span></span>
-          <span>${[v.brand,v.color].filter(Boolean).join(' / ')||'—'}</span>
-        </div>`).join('')}
+    ${cars.length?`<div class="modal-sec"><div class="modal-sec-title">รถยนต์ (${cars.length} คัน)</div>
+      ${cars.map(v=>`<div class="dr"><span class="dl"><span class="chip">${v.plate_number}${v.plate_province?' '+v.plate_province:''}</span></span><span>${[v.brand,v.color].filter(Boolean).join(' / ')||'—'}</span></div>`).join('')}
     </div>`:''}
-    ${motos.length?`
-    <div class="modal-sec">
-      <div class="modal-sec-title">รถจักรยานยนต์ (${motos.length} คัน)</div>
-      ${motos.map(v=>`
-        <div class="dr">
-          <span class="dl"><span class="chip">${v.plate_number}${v.plate_province?' '+v.plate_province:''}</span></span>
-          <span>${[v.brand,v.color].filter(Boolean).join(' / ')||'—'}</span>
-        </div>`).join('')}
+    ${motos.length?`<div class="modal-sec"><div class="modal-sec-title">รถจักรยานยนต์ (${motos.length} คัน)</div>
+      ${motos.map(v=>`<div class="dr"><span class="dl"><span class="chip">${v.plate_number}${v.plate_province?' '+v.plate_province:''}</span></span><span>${[v.brand,v.color].filter(Boolean).join(' / ')||'—'}</span></div>`).join('')}
     </div>`:''}`;
   document.getElementById('detail-modal').classList.add('show');
 }
 
-// ─── Edit record ──────────────────────────────────────────────────────────────
-async function editRecord(id){
-  const res=await fetch(`${API}/${id}`);
+async function editRecord(id) {
+  const res=await fetch(`${API}/${id}`,{headers:authHeaders()});
   const {data:r}=await res.json();
   showPage('form');
   document.getElementById('edit-id').value=id;
@@ -539,24 +715,14 @@ async function editRecord(id){
   document.getElementById('f-birthdate').value=r.birthdate?r.birthdate.split('T')[0]:'';
   document.getElementById('f-phone').value=r.phone||'';
   document.getElementById('f-id-address').value=r.id_card_address||'';
-  if(r.family_head==='self'){
-    document.getElementById('f-head-sel').value='self';
-  }else{
-    document.getElementById('f-head-sel').value='other';
-    document.getElementById('f-head-other').style.display='block';
-    document.getElementById('f-head-other').value=r.family_head;
-  }
+  if (r.family_head==='self') { document.getElementById('f-head-sel').value='self'; }
+  else { document.getElementById('f-head-sel').value='other'; document.getElementById('f-head-other').style.display='block'; document.getElementById('f-head-other').value=r.family_head; }
   const cnt=r.family_members.length;
-  document.getElementById('f-resident-count').value=cnt;
-  updateMembers(cnt);
-
+  document.getElementById('f-resident-count').value=cnt; updateMembers(cnt);
   const cars=r.vehicles.filter(v=>v.type==='car');
   const motos=r.vehicles.filter(v=>v.type==='motorcycle');
-  document.getElementById('f-car-count').value=cars.length;
-  document.getElementById('f-moto-count').value=motos.length;
-  updateVehicles('car',cars.length);
-  updateVehicles('moto',motos.length);
-
+  document.getElementById('f-car-count').value=cars.length; updateVehicles('car',cars.length);
+  document.getElementById('f-moto-count').value=motos.length; updateVehicles('moto',motos.length);
   setTimeout(()=>{
     r.family_members.forEach((m,i)=>{
       const n=i+1;
@@ -569,44 +735,31 @@ async function editRecord(id){
       document.getElementById(`m${n}-idaddr`).value=m.id_card_address||'';
       document.getElementById(`m${n}-workaddr`).value=m.work_address||'';
     });
-    cars.forEach((v,i)=>{
-      const n=i+1;
-      document.getElementById(`c${n}-plate`).value=v.plate_number||'';
-      document.getElementById(`c${n}-prov`).value=v.plate_province||'';
-      document.getElementById(`c${n}-brand`).value=v.brand||'';
-      document.getElementById(`c${n}-color`).value=v.color||'';
-    });
-    motos.forEach((v,i)=>{
-      const n=i+1;
-      document.getElementById(`mo${n}-plate`).value=v.plate_number||'';
-      document.getElementById(`mo${n}-prov`).value=v.plate_province||'';
-      document.getElementById(`mo${n}-brand`).value=v.brand||'';
-      document.getElementById(`mo${n}-color`).value=v.color||'';
-    });
+    cars.forEach((v,i)=>{ const n=i+1; document.getElementById(`c${n}-plate`).value=v.plate_number||''; document.getElementById(`c${n}-prov`).value=v.plate_province||''; document.getElementById(`c${n}-brand`).value=v.brand||''; document.getElementById(`c${n}-color`).value=v.color||''; });
+    motos.forEach((v,i)=>{ const n=i+1; document.getElementById(`mo${n}-plate`).value=v.plate_number||''; document.getElementById(`mo${n}-prov`).value=v.plate_province||''; document.getElementById(`mo${n}-brand`).value=v.brand||''; document.getElementById(`mo${n}-color`).value=v.color||''; });
   },80);
-
   document.getElementById('btn-submit').textContent='✎ อัปเดตข้อมูล';
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ─── Delete ───────────────────────────────────────────────────────────────────
-async function deleteRecord(id){
-  if(!confirm('ยืนยันการลบข้อมูลนี้?')) return;
-  try{
-    const res=await fetch(`${API}/${id}`,{method:'DELETE'});
+async function deleteRecord(id) {
+  if (!confirm('ยืนยันการลบข้อมูลนี้?')) return;
+  try {
+    const res=await fetch(`${API}/${id}`,{method:'DELETE',headers:authHeaders()});
     const json=await res.json();
-    if(!res.ok) throw new Error(json.error);
+    if (!res.ok) throw new Error(json.error);
     showAlert('alert-list','✓ '+json.message);
     loadList();
-  }catch(err){
-    showAlert('alert-list','✗ '+err.message,'error');
-  }
+  } catch(err) { showAlert('alert-list','✗ '+err.message,'error'); }
 }
 
-function closeModal(e){
-  if(e.target===document.getElementById('detail-modal'))
+function closeModal(e) {
+  if (e.target===document.getElementById('detail-modal'))
     document.getElementById('detail-modal').classList.remove('show');
 }
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+checkAuth();
 </script>
 </body>
 </html>
