@@ -228,6 +228,10 @@ initDB().then(pool => {
     }
   });
 
+  // GET /survey — standalone form (no login required)
+  app.get('/survey', (req,res) => res.sendFile(path.join(__dirname,'../frontend/public/survey.html')));
+
+  // Catch-all → admin app (requires login)
   app.get('*', (req,res) => res.sendFile(path.join(__dirname,'../frontend/public/index.html')));
   app.listen(PORT, () => console.log(`✅  Server → http://localhost:${PORT}`));
 

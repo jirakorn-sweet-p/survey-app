@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แบบสำรวจข้อมูลผู้พักอาศัย — แฟลต 2</title>
+<style>
+:root{
+  --navy:#0d2640;--navy2:#1a3a5c;--gold:#c9a84c;--green:#1a6b3c;--red:#b91c1c;
+  --bg:#f4f6f9;--surface:#fff;--border:#dde3ec;--border2:#c5cfe0;
+  --text:#1a2233;--text2:#4a5568;--text3:#8898aa;
+  --radius:10px;--radius-sm:6px;--shadow:0 2px 12px rgba(13,38,64,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6}
+.topbar{background:var(--navy);color:#fff;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.28)}
+.topbar-brand{display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600}
+.emblem{width:34px;height:34px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.container{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card-header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:10px}
+.card-header h2{font-size:17px;font-weight:600}
+.card-header .sub{font-size:13px;opacity:.7;margin-top:2px}
+.card-body{padding:1.5rem}
+.section{background:#f8fafd;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;margin-bottom:1rem}
+.section-title{font-size:12px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:1rem}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row4{display:grid;grid-template-columns:.75fr 1fr 1fr .9fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+label.lbl{font-size:13px;font-weight:600;color:var(--text2)}
+.req{color:var(--red)}
+input,select,textarea{border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--text);transition:.15s;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 3px rgba(26,58,92,.1)}
+textarea{resize:vertical;min-height:64px}
+.plate{font-family:monospace;letter-spacing:1.5px;font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:14px;font-family:inherit;font-weight:600;transition:.15s}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#145c32}
+.btn-outline{background:#fff;color:var(--text2);border:1px solid var(--border2)}.btn-outline:hover{border-color:var(--navy2);color:var(--navy2)}
+.btn-full{width:100%;justify-content:center;padding:12px}
+.member-card,.vehicle-card{background:#fff;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:1rem;margin-bottom:8px}
+.sub-badge{font-size:12px;font-weight:700;color:var(--navy2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.plate-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.alert{padding:12px 16px;border-radius:var(--radius-sm);font-size:14px;margin-bottom:1rem;display:none}
+.alert-success{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
+.alert-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
+hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
+.count-row{display:flex;align-items:center;gap:10px}
+.count-row input{width:80px}
+.count-note{font-size:13px;color:var(--text3)}
+.success-page{display:none;text-align:center;padding:3rem 1rem}
+.success-icon{font-size:64px;margin-bottom:1rem}
+.success-page h2{font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px}
+.success-page p{color:var(--text2);margin-bottom:1.5rem}
+@media(max-width:640px){.row2,.row4,.plate-row{grid-template-columns:1fr}.container{padding:1rem}.topbar{padding:0 1rem}}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="emblem">★</div>
+    <div>แบบสำรวจข้อมูลผู้พักอาศัย — แฟลต 2</div>
+  </div>
+</div>
+
+<div class="container">
+  <div id="alert-form" class="alert"></div>
+
+  <div class="card">
+    <div class="card-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <div>
+        <h2>แบบสำรวจข้อมูลผู้พักอาศัย</h2>
+        <div class="sub">กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง</div>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <!-- Success state -->
+      <div class="success-page" id="success-page">
+        <div class="success-icon">✅</div>
+        <h2>บันทึกข้อมูลเรียบร้อยแล้ว</h2>
+        <p>ขอบคุณที่กรอกแบบสำรวจข้อมูลผู้พักอาศัย</p>
+        <button class="btn btn-success" onclick="resetAndShow()">กรอกข้อมูลใหม่</button>
+      </div>
+
+      <!-- Form -->
+      <form id="survey-form" onsubmit="submitForm(event)">
+
+        <div class="section">
+          <div class="section-title">👤 ข้อมูลส่วนตัว</div>
+          <div class="row2" style="margin-bottom:10px">
+            <div class="field">
+              <label class="lbl">ยศ <span class="req">*</span></label>
+              <select id="f-rank" required>
+                <option value="">— เลือกยศ —</option>
+                <option>ส.ต.</option><option>ส.ท.</option><option>ส.อ.</option>
+                <option>จ.ส.ต.</option><option>จ.ส.ท.</option><option>จ.ส.อ.</option>
+                <option>ร.ต.</option><option>ร.ท.</option><option>ร.อ.</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="lbl">ตำแหน่ง</label>
+              <input type="text" id="f-position" placeholder="เช่น ผู้บังคับหมู่">
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label class="lbl">ชื่อ <span class="req">*</span></label><input type="text" id="f-fname" placeholder="ชื่อ" required></div>
+            <div class="field"><label class="lbl">นามสกุล <span class="req">*</span></label><input type="text" id="f-lname" placeholder="นามสกุล" required></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label class="lbl">วัน/เดือน/ปีเกิด</label><input type="date" id="f-birthdate"></div>
+            <div class="field"><label class="lbl">หมายเลขโทรศัพท์</label><input type="tel" id="f-phone" placeholder="เช่น 081-234-5678"></div>
+          </div>
+          <div class="field"><label class="lbl">ที่อยู่ตามบัตรประชาชน</label><textarea id="f-id-address" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"></textarea></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">🏠 ข้อมูลที่พัก</div>
+          <div class="row2">
+            <div class="field"><label class="lbl">ห้องที่ <span class="req">*</span></label><input type="text" id="f-room" placeholder="เช่น 101" required></div>
+            <div class="field"><label class="lbl">ชั้นที่ <span class="req">*</span></label><input type="number" id="f-floor" placeholder="เช่น 1" min="1" required></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">👨‍👩‍👧 ข้อมูลครอบครัว</div>
+          <div class="field" style="margin-bottom:12px">
+            <label class="lbl">หัวหน้าครอบครัว</label>
+            <div style="display:flex;gap:8px">
+              <select id="f-head-sel" onchange="toggleHead()" style="flex:1">
+                <option value="self">ตนเอง</option>
+                <option value="other">อื่นๆ โปรดระบุ</option>
+              </select>
+              <input type="text" id="f-head-other" placeholder="ระบุชื่อหัวหน้าครอบครัว" style="flex:1.5;display:none">
+            </div>
+          </div>
+          <hr class="div">
+          <div class="field" style="margin-bottom:12px">
+            <label class="lbl">จำนวนผู้พักอาศัย (ไม่นับตัวเอง)</label>
+            <div class="count-row">
+              <input type="number" id="f-resident-count" min="0" value="0" onchange="updateMembers(+this.value)">
+              <span class="count-note">คน</span>
+            </div>
+          </div>
+          <div id="members-wrap"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">🚗 ยานพาหนะ</div>
+          <div class="field" style="margin-bottom:1rem">
+            <label class="lbl">จำนวนรถยนต์</label>
+            <div class="count-row">
+              <input type="number" id="f-car-count" min="0" value="0" onchange="updateVehicles('car',+this.value)">
+              <span class="count-note">คัน</span>
+            </div>
+          </div>
+          <div id="cars-wrap"></div>
+          <hr class="div">
+          <div class="field" style="margin-bottom:1rem">
+            <label class="lbl">จำนวนรถจักรยานยนต์</label>
+            <div class="count-row">
+              <input type="number" id="f-moto-count" min="0" value="0" onchange="updateVehicles('moto',+this.value)">
+              <span class="count-note">คัน</span>
+            </div>
+          </div>
+          <div id="motos-wrap"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:1.25rem">
+          <button type="submit" class="btn btn-success btn-full" id="btn-submit">✓ บันทึกข้อมูล</button>
+          <button type="button" class="btn btn-outline" onclick="resetForm()" style="min-width:120px;justify-content:center">ล้างข้อมูล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api/surveys';
+const PFX = ['นาย','นาง','นางสาว','เด็กชาย','เด็กหญิง'];
+
+function toggleHead(){
+  document.getElementById('f-head-other').style.display =
+    document.getElementById('f-head-sel').value==='other'?'block':'none';
+}
+
+function updateMembers(n){
+  n=Math.max(0,n);
+  const w=document.getElementById('members-wrap');
+  w.innerHTML='';
+  if(!n) return;
+  for(let i=1;i<=n;i++){
+    const d=document.createElement('div');
+    d.className='member-card';
+    d.innerHTML=`
+      <div class="sub-badge">ผู้พักอาศัยคนที่ ${i}</div>
+      <div class="row4">
+        <div class="field"><label class="lbl">คำนำหน้า</label>
+          <select id="m${i}-pfx">${PFX.map(p=>`<option>${p}</option>`).join('')}</select></div>
+        <div class="field"><label class="lbl">ชื่อ</label><input type="text" id="m${i}-fn" placeholder="ชื่อ" required></div>
+        <div class="field"><label class="lbl">นามสกุล</label><input type="text" id="m${i}-ln" placeholder="นามสกุล" required></div>
+        <div class="field"><label class="lbl">ความสัมพันธ์</label><input type="text" id="m${i}-rel" placeholder="เช่น ภรรยา" required></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label class="lbl">วัน/เดือน/ปีเกิด</label><input type="date" id="m${i}-bd"></div>
+        <div class="field"><label class="lbl">หมายเลขโทรศัพท์</label><input type="tel" id="m${i}-phone" placeholder="เช่น 081-234-5678"></div>
+      </div>
+      <div class="field"><label class="lbl">ที่อยู่ตามบัตรประชาชน</label><textarea id="m${i}-idaddr" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด"></textarea></div>
+      <div class="field"><label class="lbl">ที่อยู่สถานที่ทำงาน</label><textarea id="m${i}-workaddr" placeholder="ชื่อสถานที่ทำงาน ที่อยู่"></textarea></div>`;
+    w.appendChild(d);
+  }
+}
+
+function updateVehicles(kind,n){
+  const wrap=document.getElementById(kind==='car'?'cars-wrap':'motos-wrap');
+  const label=kind==='car'?'รถยนต์':'รถจักรยานยนต์';
+  const px=kind==='car'?'c':'mo';
+  wrap.innerHTML='';
+  for(let i=1;i<=n;i++){
+    const d=document.createElement('div');
+    d.className='vehicle-card';
+    d.innerHTML=`
+      <div class="sub-badge">${label}คันที่ ${i}</div>
+      <div class="plate-row">
+        <div class="field"><label class="lbl">เลขทะเบียน</label><input type="text" id="${px}${i}-plate" class="plate" placeholder="เช่น กข 1234"></div>
+        <div class="field"><label class="lbl">จังหวัด</label><input type="text" id="${px}${i}-prov" placeholder="เช่น กรุงเทพมหานคร"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label class="lbl">ยี่ห้อ</label><input type="text" id="${px}${i}-brand" placeholder="เช่น Toyota"></div>
+        <div class="field"><label class="lbl">สี</label><input type="text" id="${px}${i}-color" placeholder="เช่น ขาว"></div>
+      </div>`;
+    wrap.appendChild(d);
+  }
+}
+
+function collectData(){
+  const resCount=+document.getElementById('f-resident-count').value||0;
+  const carCount=+document.getElementById('f-car-count').value||0;
+  const motoCount=+document.getElementById('f-moto-count').value||0;
+  const headSel=document.getElementById('f-head-sel').value;
+  const family_members=[];
+  for(let i=1;i<=resCount;i++){
+    family_members.push({
+      prefix:document.getElementById(`m${i}-pfx`).value,
+      first_name:document.getElementById(`m${i}-fn`).value.trim(),
+      last_name:document.getElementById(`m${i}-ln`).value.trim(),
+      relationship:document.getElementById(`m${i}-rel`).value.trim(),
+      birthdate:document.getElementById(`m${i}-bd`).value||null,
+      phone:document.getElementById(`m${i}-phone`).value.trim()||null,
+      id_card_address:document.getElementById(`m${i}-idaddr`).value.trim()||null,
+      work_address:document.getElementById(`m${i}-workaddr`).value.trim()||null,
+    });
+  }
+  const vehicles=[];
+  for(let i=1;i<=carCount;i++){
+    const p=document.getElementById(`c${i}-plate`);
+    if(p) vehicles.push({type:'car',plate_number:p.value.trim(),plate_province:document.getElementById(`c${i}-prov`).value.trim()||null,brand:document.getElementById(`c${i}-brand`).value.trim()||null,color:document.getElementById(`c${i}-color`).value.trim()||null});
+  }
+  for(let i=1;i<=motoCount;i++){
+    const p=document.getElementById(`mo${i}-plate`);
+    if(p) vehicles.push({type:'motorcycle',plate_number:p.value.trim(),plate_province:document.getElementById(`mo${i}-prov`).value.trim()||null,brand:document.getElementById(`mo${i}-brand`).value.trim()||null,color:document.getElementById(`mo${i}-color`).value.trim()||null});
+  }
+  return{
+    rank:document.getElementById('f-rank').value,
+    position:document.getElementById('f-position').value.trim()||null,
+    first_name:document.getElementById('f-fname').value.trim(),
+    last_name:document.getElementById('f-lname').value.trim(),
+    room_number:document.getElementById('f-room').value.trim(),
+    floor_number:+document.getElementById('f-floor').value,
+    family_head:headSel==='self'?'self':document.getElementById('f-head-other').value.trim()||'self',
+    birthdate:document.getElementById('f-birthdate').value||null,
+    phone:document.getElementById('f-phone').value.trim()||null,
+    id_card_address:document.getElementById('f-id-address').value.trim()||null,
+    family_members,vehicles
+  };
+}
+
+async function submitForm(e){
+  e.preventDefault();
+  const btn=document.getElementById('btn-submit');
+  btn.disabled=true; btn.textContent='กำลังบันทึก...';
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(collectData())});
+    const json=await res.json();
+    if(!res.ok) throw new Error(json.error||'เกิดข้อผิดพลาด');
+    document.getElementById('survey-form').style.display='none';
+    document.getElementById('success-page').style.display='block';
+  }catch(err){
+    const el=document.getElementById('alert-form');
+    el.className='alert alert-error'; el.textContent='✗ '+err.message; el.style.display='block';
+    setTimeout(()=>el.style.display='none',4000);
+  }finally{
+    btn.disabled=false; btn.textContent='✓ บันทึกข้อมูล';
+  }
+}
+
+function resetForm(){
+  document.getElementById('survey-form').reset();
+  document.getElementById('members-wrap').innerHTML='';
+  document.getElementById('cars-wrap').innerHTML='';
+  document.getElementById('motos-wrap').innerHTML='';
+  document.getElementById('f-head-other').style.display='none';
+}
+
+function resetAndShow(){
+  resetForm();
+  document.getElementById('success-page').style.display='none';
+  document.getElementById('survey-form').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
