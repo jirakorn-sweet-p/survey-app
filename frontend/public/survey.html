@@ -101,10 +101,14 @@ hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
                 <option>ร.ต.</option><option>ร.ท.</option><option>ร.อ.</option>
               </select>
             </div>
-            <div class="field">
+              <div class="field">
               <label class="lbl">ตำแหน่ง</label>
               <input type="text" id="f-position" placeholder="เช่น ผู้บังคับหมู่">
             </div>
+          </div>
+          <div class="field">
+            <label class="lbl">สังกัด</label>
+            <input type="text" id="f-unit" placeholder="เช่น กองพันทหารราบที่ 1">
           </div>
           <div class="row2">
             <div class="field"><label class="lbl">ชื่อ <span class="req">*</span></label><input type="text" id="f-fname" placeholder="ชื่อ" required></div>
@@ -266,6 +270,7 @@ function collectData(){
   return{
     rank:document.getElementById('f-rank').value,
     position:document.getElementById('f-position').value.trim()||null,
+    unit:document.getElementById('f-unit').value.trim()||null,
     first_name:document.getElementById('f-fname').value.trim(),
     last_name:document.getElementById('f-lname').value.trim(),
     room_number:document.getElementById('f-room').value.trim(),

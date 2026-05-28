@@ -89,7 +89,7 @@ initDB().then(pool => {
           (SELECT COUNT(*) FROM vehicles WHERE resident_id=r.id AND type='motorcycle')::int AS moto_count
         FROM residents r
         WHERE r.first_name ILIKE $1 OR r.last_name ILIKE $1 OR r.rank ILIKE $1
-          OR r.room_number ILIKE $1 OR r.position ILIKE $1
+          OR r.room_number ILIKE $1 OR r.position ILIKE $1 OR r.unit ILIKE $1
         ORDER BY ${sortCol} ${sortOrder}
       `, [searchParam]);
       res.json({ success: true, data: rows });
@@ -102,7 +102,7 @@ initDB().then(pool => {
   app.get('/api/surveys/export', authMiddleware, async (req, res) => {
     try {
       const { rows } = await pool.query(`
-        SELECT r.rank, r.position, r.first_name, r.last_name,
+        SELECT r.rank, r.position, r.unit, r.first_name, r.last_name,
                r.room_number, r.floor_number, r.phone, r.birthdate,
                r.id_card_address, r.family_head, r.resident_count,
                r.created_at
@@ -135,17 +135,17 @@ initDB().then(pool => {
     const {
       rank, first_name, last_name, room_number, floor_number,
       family_head='self', family_members=[], vehicles=[],
-      position=null, birthdate=null, id_card_address=null, phone=null
+      position=null, unit=null, birthdate=null, id_card_address=null, phone=null
     } = req.body;
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       const { rows: [{ id: rid }] } = await client.query(
         `INSERT INTO residents
-           (rank,first_name,last_name,room_number,floor_number,family_head,resident_count,position,birthdate,id_card_address,phone)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+           (rank,first_name,last_name,room_number,floor_number,family_head,resident_count,position,unit,birthdate,id_card_address,phone)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
         [rank,first_name.trim(),last_name.trim(),room_number.trim(),floor_number,
-         family_head,family_members.length,position||null,birthdate||null,id_card_address||null,phone||null]
+         family_head,family_members.length,position||null,unit||null,birthdate||null,id_card_address||null,phone||null]
       );
       for (const m of family_members) {
         await client.query(
@@ -178,7 +178,7 @@ initDB().then(pool => {
     const {
       rank,first_name,last_name,room_number,floor_number,
       family_head='self',family_members=[],vehicles=[],
-      position=null,birthdate=null,id_card_address=null,phone=null
+      position=null,unit=null,birthdate=null,id_card_address=null,phone=null
     } = req.body;
     const client = await pool.connect();
     try {
@@ -187,9 +187,9 @@ initDB().then(pool => {
       if (!ex) { await client.query('ROLLBACK'); return res.status(404).json({success:false,error:'ไม่พบข้อมูล'}); }
       await client.query(
         `UPDATE residents SET rank=$1,first_name=$2,last_name=$3,room_number=$4,floor_number=$5,
-         family_head=$6,resident_count=$7,position=$8,birthdate=$9,id_card_address=$10,phone=$11,updated_at=NOW() WHERE id=$12`,
+         family_head=$6,resident_count=$7,position=$8,unit=$9,birthdate=$10,id_card_address=$11,phone=$12,updated_at=NOW() WHERE id=$13`,
         [rank,first_name.trim(),last_name.trim(),room_number.trim(),floor_number,
-         family_head,family_members.length,position||null,birthdate||null,id_card_address||null,phone||null,req.params.id]
+         family_head,family_members.length,position||null,unit||null,birthdate||null,id_card_address||null,phone||null,req.params.id]
       );
       await client.query('DELETE FROM family_members WHERE resident_id=$1',[req.params.id]);
       await client.query('DELETE FROM vehicles WHERE resident_id=$1',[req.params.id]);
@@ -225,6 +225,570 @@ initDB().then(pool => {
       res.json({success:true,message:'ลบข้อมูลเรียบร้อยแล้ว'});
     } catch (err) {
       res.status(500).json({success:false,error:err.message});
+    }
+  });
+
+
+  // GET /api/surveys/export/vehicles — vehicle Excel export (protected)
+  app.get('/api/surveys/export/vehicles', authMiddleware, async (req, res) => {
+    try {
+      const { rows } = await pool.query(`
+        SELECT r.rank, r.position, r.unit, r.first_name, r.last_name,
+               r.room_number, r.floor_number, r.phone,
+               v.type, v.plate_number, v.plate_province, v.brand, v.color
+        FROM vehicles v
+        JOIN residents r ON r.id = v.resident_id
+        ORDER BY v.type, r.floor_number, r.room_number
+      `);
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+
+  // GET /api/surveys/:id/docx — generate filled DOCX (protected)
+  app.get('/api/surveys/:id/docx', authMiddleware, async (req, res) => {
+    const os   = require('os');
+    const { execSync } = require('child_process');
+    const fs   = require('fs');
+
+    try {
+      const { rows:[r] } = await pool.query('SELECT * FROM residents WHERE id=$1',[req.params.id]);
+      if (!r) return res.status(404).json({success:false,error:'ไม่พบข้อมูล'});
+      const { rows: members }  = await pool.query('SELECT * FROM family_members WHERE resident_id=$1 ORDER BY id LIMIT 4',[r.id]);
+      const { rows: vehicles } = await pool.query('SELECT * FROM vehicles WHERE resident_id=$1 ORDER BY id',[r.id]);
+
+      const cars  = vehicles.filter(v=>v.type==='car').slice(0,3);
+      const motos = vehicles.filter(v=>v.type==='motorcycle').slice(0,3);
+      const m = (i) => members[i] || {};
+
+      const fmtDate = (d) => {
+        if (!d) return '';
+        const dt = new Date(d);
+        if (isNaN(dt)) return '';
+        const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        return `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()+543}`;
+      };
+      const calcAge = (d) => {
+        if (!d) return '';
+        return String(Math.floor((Date.now()-new Date(d).getTime())/(1000*60*60*24*365.25)));
+      };
+      const xmlEsc = (s) => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      const map = {
+        'ตำแหน่ง':  r.position||'',
+        'ชื่อ-สกุล': `${r.first_name||''}  ${r.last_name||''}`,
+        'ยศ':        r.rank||'',
+        'สังกัด':   r.unit||'',
+        'วันเกิด':  fmtDate(r.birthdate),
+        'อายุ':     calcAge(r.birthdate),
+        'ที่อยู่':  r.id_card_address||'',
+        'ชั้น':     String(r.floor_number||''),
+        'ห้อง':     r.room_number||'',
+        'เบอร์โทร': r.phone||'',
+        'คำนำหน้า-ชื่อ1': m(0).prefix?`${m(0).prefix} ${m(0).first_name||''}  ${m(0).last_name||''}`:'',
+        'วันเกิด1': fmtDate(m(0).birthdate),
+        'อายุ1':    calcAge(m(0).birthdate),
+        'ที่อยู่1': m(0).id_card_address||'',
+        'ที่อยู่ที่ทำงาน1': m(0).work_address||'',
+        'เบอร์โทร1': m(0).phone||'',
+        'ความสัมพันธ์1': m(0).relationship||'',
+        'คำนำหน้า-ชื่อ2': m(1).prefix?`${m(1).prefix} ${m(1).first_name||''}  ${m(1).last_name||''}`:'',
+        'วันเกิด2': fmtDate(m(1).birthdate),
+        'อายุ2':    calcAge(m(1).birthdate),
+        'ที่อยู่2': m(1).id_card_address||'',
+        'ที่อยู่ที่ทำงาน2': m(1).work_address||'',
+        'เบอร์โทร2': m(1).phone||'',
+        'ความสัมพันธ์2': m(1).relationship||'',
+        'คำนำหน้า-ชื่อ3': m(2).prefix?`${m(2).prefix} ${m(2).first_name||''}  ${m(2).last_name||''}`:'',
+        'วันเกิด3': fmtDate(m(2).birthdate),
+        'อายุ3':    calcAge(m(2).birthdate),
+        'ที่อยู่3': m(2).id_card_address||'',
+        'ที่อยู่ที่ทำงาน3': m(2).work_address||'',
+        'เบอร์โทร3': m(2).phone||'',
+        'ความสัมพันธ์3': m(2).relationship||'',
+        'คำนำหน้า-ชื่อ4': m(3).prefix?`${m(3).prefix} ${m(3).first_name||''}  ${m(3).last_name||''}`:'',
+        'วันเกิด4': fmtDate(m(3).birthdate),
+        'อายุ4':    calcAge(m(3).birthdate),
+        'ที่อยู่4': m(3).id_card_address||'',
+        'ที่อยู่ที่ทำงาน4': m(3).work_address||'',
+        'เบอร์โทร4': m(3).phone||'',
+        'ความสัมพันธ์4': m(3).relationship||'',
+        'จำนวนรถยนต์': String(cars.length),
+        'ยี่ห้อ1':   cars[0]?.brand||'',
+        'สี41':      cars[0]?.color||'',
+        'ทะเบียน41': cars[0]?.plate_number||'',
+        'จังหวัด41': cars[0]?.plate_province||'',
+        'ยี่ห้อ2':   cars[1]?.brand||'',
+        'สี42':      cars[1]?.color||'',
+        'ทะเบียน42': cars[1]?.plate_number||'',
+        'จังหวัด42': cars[1]?.plate_province||'',
+        'ยี่ห้อ3':   cars[2]?.brand||'',
+        'สี43':      cars[2]?.color||'',
+        'ทะเบียน43': cars[2]?.plate_number||'',
+        'จังหวัด43': cars[2]?.plate_province||'',
+        'จำนวนรถจักร': String(motos.length),
+        'ยี่ห้อ21':  motos[0]?.brand||'',
+        'สี21':      motos[0]?.color||'',
+        'ทะเบียน21': motos[0]?.plate_number||'',
+        'จังหวัด21': motos[0]?.plate_province||'',
+        'ยี่ห้อ22':  motos[1]?.brand||'',
+        'สี22':      motos[1]?.color||'',
+        'ทะเบียน22': motos[1]?.plate_number||'',
+        'จังหวัด22': motos[1]?.plate_province||'',
+        'ยี่ห้อ23':  motos[2]?.brand||'',
+        'สี23':      motos[2]?.color||'',
+        'ทะเบียน23': motos[2]?.plate_number||'',
+        'จังหวัด23': motos[2]?.plate_province||'',
+      };
+
+      // Replace logic:
+      // Each textbox starts with <w:t>#</w:t> followed by 1+ runs containing the label text
+      // Join all label runs to get full key (handles multi-run: ชื่อ-สกุล, ความสัมพันธ์1 etc.)
+      // Then replace # run with value and clear all label runs
+      const replaceInBlock = (block) => {
+        const texts = [...block.matchAll(/<w:t[^>]*>([^<]+)<\/w:t>/g)].map(m=>m[1]);
+        if (!texts.length || texts[0] !== '#') return block;
+        const label = texts.slice(1).join('');
+        const val = map[label];
+        if (val === undefined) return block;
+        const esc = xmlEsc(val);
+        // Replace # with value
+        block = block.replace('<w:t>#</w:t>', `<w:t>${esc}</w:t>`);
+        // Clear each label part run
+        for (const t of texts.slice(1)) {
+          const tEsc = xmlEsc(t);
+          block = block.replace(
+            new RegExp('<(w:t(?:[^>]*)>)' + tEsc.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '<\/w:t>'),
+            '<$1</w:t>'
+          );
+        }
+        return block;
+      };
+
+      // Work in temp dir
+      const tmpDir  = fs.mkdtempSync(path.join(os.tmpdir(),'docx-'));
+      const srcDocx = path.join(__dirname,'form_template.docx');
+      const outDocx = path.join(tmpDir,'output.docx');
+      const xmlDir  = path.join(tmpDir,'xml');
+
+      execSync(`unzip -q "${srcDocx}" -d "${xmlDir}"`);
+
+      const xmlPath = path.join(xmlDir,'word','document.xml');
+      let xml = fs.readFileSync(xmlPath,'utf8');
+
+      xml = xml.replace(/<wps:txbx>[\s\S]*?<\/wps:txbx>/g, replaceInBlock);
+      xml = xml.replace(/<v:textbox[\s\S]*?<\/v:textbox>/g, replaceInBlock);
+
+      fs.writeFileSync(xmlPath, xml);
+      execSync(`cd "${xmlDir}" && zip -qr "${outDocx}" .`);
+
+      const fname = encodeURIComponent(`survey_${r.rank}_${r.first_name}_${r.last_name}.docx`.replace(/\s+/g,'_'));
+      res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition',`attachment; filename*=UTF-8''${fname}`);
+      res.send(fs.readFileSync(outDocx));
+      fs.rmSync(tmpDir,{recursive:true,force:true});
+
+    } catch(err) {
+      console.error('DOCX error:',err);
+      res.status(500).json({success:false,error:err.message});
+    }
+  });
+
+  // GET /api/surveys/export/vehicles — vehicle Excel export (protected)
+  app.get('/api/surveys/export/vehicles', authMiddleware, async (req, res) => {
+    try {
+      const { rows } = await pool.query(`
+        SELECT r.rank, r.position, r.unit, r.first_name, r.last_name,
+               r.room_number, r.floor_number, r.phone,
+               v.type, v.plate_number, v.plate_province, v.brand, v.color
+        FROM vehicles v
+        JOIN residents r ON r.id = v.resident_id
+        ORDER BY v.type, r.floor_number, r.room_number
+      `);
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+
+  // GET /api/surveys/:id/docx — generate filled DOCX (protected)
+  app.get('/api/surveys/:id/docx', authMiddleware, async (req, res) => {
+    const os   = require('os');
+    const { execSync } = require('child_process');
+    const fs   = require('fs');
+
+    try {
+      const { rows:[r] } = await pool.query('SELECT * FROM residents WHERE id=$1',[req.params.id]);
+      if (!r) return res.status(404).json({success:false,error:'ไม่พบข้อมูล'});
+      const { rows: members }  = await pool.query('SELECT * FROM family_members WHERE resident_id=$1 ORDER BY id LIMIT 4',[r.id]);
+      const { rows: vehicles } = await pool.query('SELECT * FROM vehicles WHERE resident_id=$1 ORDER BY id',[r.id]);
+
+      const cars  = vehicles.filter(v=>v.type==='car').slice(0,3);
+      const motos = vehicles.filter(v=>v.type==='motorcycle').slice(0,3);
+      const m = (i) => members[i] || {};
+
+      const fmtDate = (d) => {
+        if (!d) return '';
+        const dt = new Date(d);
+        if (isNaN(dt)) return '';
+        const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        return `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()+543}`;
+      };
+      const calcAge = (d) => {
+        if (!d) return '';
+        return String(Math.floor((Date.now()-new Date(d).getTime())/(1000*60*60*24*365.25)));
+      };
+      const xmlEsc = (s) => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      // Map: placeholder label (without #) -> value
+      const map = {
+        // เจ้าของห้อง
+        'ตำแหน่ง':  r.position||'',
+        'ชื่อ-สกุล': `${r.first_name||''}  ${r.last_name||''}`,
+        'ยศ':        r.rank||'',
+        'สังกัด':   r.unit||'',
+        'วันเกิด':  fmtDate(r.birthdate),
+        'อายุ':     calcAge(r.birthdate),
+        'ที่อยู่':  r.id_card_address||'',
+        'ชั้น':     String(r.floor_number||''),
+        'ห้อง':     r.room_number||'',
+        'เบอร์โทร': r.phone||'',
+        // ผู้ร่วมอาศัย 1
+        'คำนำหน้า-ชื่อ1': m(0).prefix?`${m(0).prefix} ${m(0).first_name||''}  ${m(0).last_name||''}`:'',
+        'วันเกิด1': fmtDate(m(0).birthdate),
+        'อายุ1':    calcAge(m(0).birthdate),
+        'ที่อยู่1': m(0).id_card_address||'',
+        'ที่อยู่ที่ทำงาน1': m(0).work_address||'',
+        'เบอร์โทร1': m(0).phone||'',
+        'ความสัมพันธ์1': m(0).relationship||'',
+        // ผู้ร่วมอาศัย 2
+        'คำนำหน้า-ชื่อ2': m(1).prefix?`${m(1).prefix} ${m(1).first_name||''}  ${m(1).last_name||''}`:'',
+        'วันเกิด2': fmtDate(m(1).birthdate),
+        'อายุ2':    calcAge(m(1).birthdate),
+        'ที่อยู่2': m(1).id_card_address||'',
+        'ที่อยู่ที่ทำงาน2': m(1).work_address||'',
+        'เบอร์โทร2': m(1).phone||'',
+        'ความสัมพันธ์2': m(1).relationship||'',
+        // ผู้ร่วมอาศัย 3
+        'คำนำหน้า-ชื่อ3': m(2).prefix?`${m(2).prefix} ${m(2).first_name||''}  ${m(2).last_name||''}`:'',
+        'วันเกิด3': fmtDate(m(2).birthdate),
+        'อายุ3':    calcAge(m(2).birthdate),
+        'ที่อยู่3': m(2).id_card_address||'',
+        'ที่อยู่ที่ทำงาน3': m(2).work_address||'',
+        'เบอร์โทร3': m(2).phone||'',
+        'ความสัมพันธ์3': m(2).relationship||'',
+        // ผู้ร่วมอาศัย 4
+        'คำนำหน้า-ชื่อ4': m(3).prefix?`${m(3).prefix} ${m(3).first_name||''}  ${m(3).last_name||''}`:'',
+        'วันเกิด4': fmtDate(m(3).birthdate),
+        'อายุ4':    calcAge(m(3).birthdate),
+        'ที่อยู่4': m(3).id_card_address||'',
+        'ที่อยู่ที่ทำงาน4': m(3).work_address||'',
+        'เบอร์โทร4': m(3).phone||'',
+        'ความสัมพันธ์4': m(3).relationship||'',
+        // รถยนต์
+        'จำนวนรถยนต์': String(cars.length),
+        'ยี่ห้อ1':   cars[0]?.brand||'',
+        'สี41':      cars[0]?.color||'',
+        'ทะเบียน41': cars[0]?.plate_number||'',
+        'จังหวัด41': cars[0]?.plate_province||'',
+        'ยี่ห้อ2':   cars[1]?.brand||'',
+        'สี42':      cars[1]?.color||'',
+        'ทะเบียน42': cars[1]?.plate_number||'',
+        'จังหวัด42': cars[1]?.plate_province||'',
+        'ยี่ห้อ3':   cars[2]?.brand||'',
+        'สี43':      cars[2]?.color||'',
+        'ทะเบียน43': cars[2]?.plate_number||'',
+        'จังหวัด43': cars[2]?.plate_province||'',
+        // รถจักรยานยนต์
+        'จำนวนรถจักร': String(motos.length),
+        'ยี่ห้อ21':  motos[0]?.brand||'',
+        'สี21':      motos[0]?.color||'',
+        'ทะเบียน21': motos[0]?.plate_number||'',
+        'จังหวัด21': motos[0]?.plate_province||'',
+        'ยี่ห้อ22':  motos[1]?.brand||'',
+        'สี22':      motos[1]?.color||'',
+        'ทะเบียน22': motos[1]?.plate_number||'',
+        'จังหวัด22': motos[1]?.plate_province||'',
+        'ยี่ห้อ23':  motos[2]?.brand||'',
+        'สี23':      motos[2]?.color||'',
+        'ทะเบียน23': motos[2]?.plate_number||'',
+        'จังหวัด23': motos[2]?.plate_province||'',
+      };
+
+      // Replace function — each textbox has exactly 2 runs:
+      // run1: <w:t>#</w:t>   run2: <w:t>LABEL</w:t>
+      // Strategy: replace run1's text with the value, clear run2's text
+      const replaceInBlock = (block) => {
+        return block.replace(
+          /(<w:t>)#(<\/w:t>)([\s\S]*?<w:t(?:[^>]*)>)([^<]*?)(<\/w:t>)/,
+          (match, t1open, t1close, middle, label, t2close) => {
+            const val = map[label];
+            if (val !== undefined) {
+              return `${t1open}${xmlEsc(val)}${t1close}${middle}${t2close}`;
+            }
+            return match;
+          }
+        );
+      };
+
+      // Work in temp dir
+      const tmpDir  = fs.mkdtempSync(path.join(os.tmpdir(),'docx-'));
+      const srcDocx = path.join(__dirname,'form_template.docx');
+      const outDocx = path.join(tmpDir,'output.docx');
+      const xmlDir  = path.join(tmpDir,'xml');
+
+      execSync(`unzip -q "${srcDocx}" -d "${xmlDir}"`);
+
+      const xmlPath = path.join(xmlDir,'word','document.xml');
+      let xml = fs.readFileSync(xmlPath,'utf8');
+
+      // Process each textbox type
+      xml = xml.replace(/<wps:txbx>[\s\S]*?<\/wps:txbx>/g, replaceInBlock);
+      xml = xml.replace(/<v:textbox[\s\S]*?<\/v:textbox>/g, replaceInBlock);
+
+      fs.writeFileSync(xmlPath, xml);
+      execSync(`cd "${xmlDir}" && zip -qr "${outDocx}" .`);
+
+      const fname = encodeURIComponent(`survey_${r.rank}_${r.first_name}_${r.last_name}.docx`.replace(/\s+/g,'_'));
+      res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition',`attachment; filename*=UTF-8''${fname}`);
+      res.send(fs.readFileSync(outDocx));
+      fs.rmSync(tmpDir,{recursive:true,force:true});
+
+    } catch(err) {
+      console.error('DOCX error:',err);
+      res.status(500).json({success:false,error:err.message});
+    }
+  });
+
+  // GET /api/surveys/export/vehicles — vehicle Excel export (protected)
+  app.get('/api/surveys/export/vehicles', authMiddleware, async (req, res) => {
+    try {
+      const { rows } = await pool.query(`
+        SELECT r.rank, r.position, r.unit, r.first_name, r.last_name,
+               r.room_number, r.floor_number, r.phone,
+               v.type, v.plate_number, v.plate_province, v.brand, v.color
+        FROM vehicles v
+        JOIN residents r ON r.id = v.resident_id
+        ORDER BY v.type, r.floor_number, r.room_number
+      `);
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+
+  // GET /api/surveys/:id/docx — generate filled DOCX (protected)
+  app.get('/api/surveys/:id/docx', authMiddleware, async (req, res) => {
+    const os   = require('os');
+    const { execSync } = require('child_process');
+    const fs   = require('fs');
+
+    try {
+      // 1. Fetch full record
+      const { rows: [r] } = await pool.query('SELECT * FROM residents WHERE id=$1', [req.params.id]);
+      if (!r) return res.status(404).json({ success:false, error:'ไม่พบข้อมูล' });
+      const { rows: members } = await pool.query('SELECT * FROM family_members WHERE resident_id=$1 ORDER BY id LIMIT 4', [r.id]);
+      const { rows: vehicles } = await pool.query('SELECT * FROM vehicles WHERE resident_id=$1 ORDER BY id', [r.id]);
+
+      const cars  = vehicles.filter(v => v.type === 'car').slice(0, 3);
+      const motos = vehicles.filter(v => v.type === 'motorcycle').slice(0, 3);
+
+      // 2. Helpers
+      const fmtDate = (d) => {
+        if (!d) return '';
+        const dt = new Date(d);
+        if (isNaN(dt)) return '';
+        const day   = dt.getDate();
+        const month = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][dt.getMonth()];
+        const year  = dt.getFullYear() + 543;
+        return `${day} ${month} ${year}`;
+      };
+      const calcAge = (d) => {
+        if (!d) return '';
+        const diff = Date.now() - new Date(d).getTime();
+        return String(Math.floor(diff / (1000*60*60*24*365.25)));
+      };
+      const m = (i) => members[i] || {};
+
+      // 3. Build replacement map — key must match exactly what appears after # in doc
+      const map = {
+        // เจ้าของห้อง
+        'ยศ':      r.rank || '',
+        'ชื่อ-สกุล': `${r.first_name || ''}  ${r.last_name || ''}`,
+        'ตำแหน่ง': r.position || '',
+        'สังกัด':  r.unit || '',
+        'วันเกิด': fmtDate(r.birthdate),
+        'อายุ':    calcAge(r.birthdate),
+        'ที่อยู่': r.id_card_address || '',
+        'ชั้น':    String(r.floor_number || ''),
+        'ห้อง':    r.room_number || '',
+        'เบอร์โทร': r.phone || '',
+        // ผู้ร่วมอาศัย 1
+        'คำนำหน้า-ชื่อ1': m(0).prefix ? `${m(0).prefix} ${m(0).first_name || ''}  ${m(0).last_name || ''}` : '',
+        'วันเกิด1':  fmtDate(m(0).birthdate),
+        'อายุ1':     calcAge(m(0).birthdate),
+        'ที่อยู่1':  m(0).id_card_address || '',
+        'ที่อยู่ที่ทำงาน1': m(0).work_address || '',
+        'เบอร์โทร1': m(0).phone || '',
+        'ความสัมพันธ์1': m(0).relationship || '',
+        // ผู้ร่วมอาศัย 2
+        'คำนำหน้า-ชื่อ2': m(1).prefix ? `${m(1).prefix} ${m(1).first_name || ''}  ${m(1).last_name || ''}` : '',
+        'วันเกิด2':  fmtDate(m(1).birthdate),
+        'อายุ2':     calcAge(m(1).birthdate),
+        'ที่อยู่2':  m(1).id_card_address || '',
+        'ที่อยู่ที่ทำงาน2': m(1).work_address || '',
+        'เบอร์โทร2': m(1).phone || '',
+        'ความสัมพันธ์2': m(1).relationship || '',
+        // ผู้ร่วมอาศัย 3
+        'คำนำหน้า-ชื่อ3': m(2).prefix ? `${m(2).prefix} ${m(2).first_name || ''}  ${m(2).last_name || ''}` : '',
+        'วันเกิด3':  fmtDate(m(2).birthdate),
+        'อายุ3':     calcAge(m(2).birthdate),
+        'ที่อยู่3':  m(2).id_card_address || '',
+        'ที่อยู่ที่ทำงาน3': m(2).work_address || '',
+        'เบอร์โทร3': m(2).phone || '',
+        'ความสัมพันธ์3': m(2).relationship || '',
+        // ผู้ร่วมอาศัย 4
+        'คำนำหน้า-ชื่อ4': m(3).prefix ? `${m(3).prefix} ${m(3).first_name || ''}  ${m(3).last_name || ''}` : '',
+        'วันเกิด4':  fmtDate(m(3).birthdate),
+        'อายุ4':     calcAge(m(3).birthdate),
+        'ที่อยู่4':  m(3).id_card_address || '',
+        'ที่อยู่ที่ทำงาน4': m(3).work_address || '',
+        'เบอร์โทร4': m(3).phone || '',
+        'ความสัมพันธ์4': m(3).relationship || '',
+        // ยานพาหนะ — รถยนต์
+        'จำนวนรถยนต์': String(cars.length),
+        'ยี่ห้อ1':   cars[0]?.brand || '',
+        'สี41':      cars[0]?.color || '',
+        'ทะเบียน41': cars[0]?.plate_number || '',
+        'จังหวัด41': cars[0]?.plate_province || '',
+        'ยี่ห้อ2':   cars[1]?.brand || '',
+        'สี42':      cars[1]?.color || '',
+        'ทะเบียน42': cars[1]?.plate_number || '',
+        'จังหวัด42': cars[1]?.plate_province || '',
+        'ยี่ห้อ3':   cars[2]?.brand || '',
+        'สี43':      cars[2]?.color || '',
+        'ทะเบียน43': cars[2]?.plate_number || '',
+        'จังหวัด43': cars[2]?.plate_province || '',
+        // ยานพาหนะ — รถจักรยานยนต์
+        'จำนวนรถจักร': String(motos.length),
+        'ยี่ห้อ21':  motos[0]?.brand || '',
+        'สี21':      motos[0]?.color || '',
+        'ทะเบียน21': motos[0]?.plate_number || '',
+        'จังหวัด21': motos[0]?.plate_province || '',
+        'ยี่ห้อ22':  motos[1]?.brand || '',
+        'สี22':      motos[1]?.color || '',
+        'ทะเบียน22': motos[1]?.plate_number || '',
+        'จังหวัด22': motos[1]?.plate_province || '',
+        'ยี่ห้อ23':  motos[2]?.brand || '',
+        'สี23':      motos[2]?.color || '',
+        'ทะเบียน23': motos[2]?.plate_number || '',
+        'จังหวัด23': motos[2]?.plate_province || '',
+      };
+
+      // 4. Work in temp dir
+      const tmpDir  = fs.mkdtempSync(path.join(os.tmpdir(), 'docx-'));
+      const srcDocx = path.join(__dirname, 'form_template.docx');
+      const outDocx = path.join(tmpDir, 'output.docx');
+      const xmlDir  = path.join(tmpDir, 'xml');
+
+      execSync(`unzip -q "${srcDocx}" -d "${xmlDir}"`);
+
+      const xmlPath = path.join(xmlDir, 'word', 'document.xml');
+      let xml = fs.readFileSync(xmlPath, 'utf8');
+
+      // 5. Replace strategy:
+      // In the XML, each text box contains two consecutive runs:
+      //   <w:t>#</w:t>  and  <w:t ...>LABEL</w:t>
+      // We replace the content of the LABEL run with the value,
+      // and replace # run with empty string.
+      for (const [label, value] of Object.entries(map)) {
+        const escaped = (value || '')
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;');
+
+        // Escape label for regex
+        const esc = label.replace(/[-[\]/{}()*+?.\^$|]/g,'\$&');
+
+        // Replace the # run content with value, clear the label run
+        // Pattern covers both wps:txbx and v:textbox variants
+        // Each textbox has: <w:t>#</w:t> ... <w:t...>LABEL</w:t>
+        // We want: <w:t>VALUE</w:t> ... <w:t...></w:t>
+        const re = new RegExp(
+          '(<w:t>)#(</w:t>)((?:(?!</w:txbxContent>)[\s\S]){0,300}?<w:t(?:[^>]*)>)' + esc + '(</w:t>)',
+          'g'
+        );
+        xml = xml.replace(re, `$1${escaped}$2$3$4`);
+        // Clear the label text after replacement
+        const re2 = new RegExp(
+          '(<w:t>)' + escaped.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+          '(</w:t>)((?:(?!</w:txbxContent>)[\s\S]){0,300}?<w:t(?:[^>]*)>)' + esc + '(</w:t>)',
+          'g'
+        );
+        xml = xml.replace(re2, `$1${escaped}$2$3$4`);
+
+        // Simpler direct label erasure: after # was already replaced, clear remaining label
+        const reClear = new RegExp(
+          '(<w:t(?:[^>]*)>)' + esc + '(</w:t>)',
+          'g'
+        );
+        // Only clear inside textboxes that still have the original label (not replaced yet)
+        // We'll do a targeted replace per textbox block
+      }
+
+      // Cleaner approach: process each textbox individually
+      // Reset and do it properly
+      xml = fs.readFileSync(xmlPath, 'utf8');
+
+      // Split into textbox segments, replace within each
+      // Find all <wps:txbx>...</wps:txbx> and <v:textbox>...</v:textbox> blocks
+      const processTextbox = (block) => {
+        for (const [label, value] of Object.entries(map)) {
+          const escaped = (value || '')
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;');
+          const esc = label.replace(/[-[\]/{}()*+?.\\^$|]/g,'\\$&');
+
+          // Match: <w:t>#</w:t> ... <w:t...>LABEL</w:t>
+          // Replace # with value and LABEL with empty
+          const re = new RegExp(
+            '(<w:t>)#(</w:t>)([\s\S]*?<w:t(?:[^>]*)>)' + esc + '(</w:t>)'
+          );
+          if (re.test(block)) {
+            block = block.replace(re, `$1${escaped}$2$3$4`);
+            // Clear label text
+            const reClear = new RegExp('(<w:t(?:[^>]*)>)' + esc + '(</w:t>)');
+            block = block.replace(reClear, '$1$2');
+          }
+        }
+        return block;
+      };
+
+      // Process wps:txbx blocks
+      xml = xml.replace(/<wps:txbx>[\s\S]*?<\/wps:txbx>/g, processTextbox);
+      // Process v:textbox blocks
+      xml = xml.replace(/<v:textbox[\s\S]*?<\/v:textbox>/g, processTextbox);
+
+      fs.writeFileSync(xmlPath, xml);
+      execSync(`cd "${xmlDir}" && zip -qr "${outDocx}" .`);
+
+      const fname = `survey_${r.rank}_${r.first_name}_${r.last_name}.docx`
+        .replace(/\s+/g,'_');
+      res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(fname)}`);
+      res.send(fs.readFileSync(outDocx));
+
+      fs.rmSync(tmpDir, { recursive:true, force:true });
+
+    } catch (err) {
+      console.error('DOCX error:', err);
+      res.status(500).json({ success:false, error: err.message });
     }
   });
 

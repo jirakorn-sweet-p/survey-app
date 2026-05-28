@@ -128,6 +128,23 @@ tr:hover td{background:#f8fafd}
 .dr .dl{color:var(--text2);min-width:160px;flex-shrink:0;font-weight:500}
 .chip{display:inline-block;background:#f0f4fa;border:1px solid var(--border);border-radius:4px;padding:2px 10px;font-size:13px;margin:2px;font-family:monospace;font-weight:600}
 
+
+/* ── Floor Plan ── */
+.floor-row{background:#f8fafd;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem}
+.floor-label{font-size:12px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.floor-label .fl-badge{background:var(--navy2);color:#fff;border-radius:4px;padding:2px 8px;font-size:11px}
+.rooms-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:6px}
+.room-cell{aspect-ratio:1;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;transition:transform .15s,box-shadow .15s;position:relative;border:2px solid transparent}
+.room-cell:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.18)}
+.room-cell.occupied{background:var(--navy2);color:#fff;border-color:rgba(255,255,255,.15)}
+.room-cell.occupied:hover{background:var(--navy3)}
+.room-cell.vacant{background:#dc2626;color:#fff;border-color:rgba(255,255,255,.1);cursor:default}
+.room-cell.vacant:hover{transform:none;box-shadow:none}
+.room-num{font-size:11px;font-weight:700;line-height:1}
+.room-name{font-size:9px;opacity:.85;line-height:1.2;text-align:center;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.room-detail-modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:1.5rem}
+@media(max-width:900px){.rooms-grid{grid-template-columns:repeat(8,1fr)}}
+@media(max-width:500px){.rooms-grid{grid-template-columns:repeat(4,1fr)}.room-cell{border-radius:6px}}
 /* ── Loader ── */
 .loader{display:none;text-align:center;padding:2rem;color:var(--text3)}
 .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--navy2);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
@@ -184,6 +201,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
       <div class="nav-tabs">
         <button class="nav-tab active" onclick="showPage('form')">กรอกข้อมูล</button>
         <button class="nav-tab" onclick="showPage('list')">รายการทั้งหมด</button>
+        <button class="nav-tab" onclick="showPage('floorplan')">🏢 แผนผังห้องพัก</button>
       </div>
       <div class="user-chip">👤 <span id="username-display"></span></div>
       <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
@@ -302,7 +320,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <div><h2>รายการผู้พักอาศัยทั้งหมด</h2><div class="sub" id="total-count">—</div></div>
         </div>
-        <button class="btn btn-gold btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-gold btn-sm" onclick="exportExcel()">⬇ Export ผู้พักอาศัย</button>
+          <button class="btn btn-gold btn-sm" onclick="exportVehicles()">🚗 Export ยานพาหนะ</button>
+        </div>
       </div>
       <div class="card-body">
         <div class="list-toolbar">
@@ -341,12 +362,44 @@ hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
   </div>
 </div>
 
+<!-- ═══ FLOOR PLAN PAGE ═══ -->
+<div id="page-floorplan" class="container" style="display:none">
+  <div id="alert-floorplan" class="alert"></div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <div><h2>แผนผังห้องพัก — แฟลต 2</h2><div class="sub" id="fp-summary">กำลังโหลด...</div></div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="loadFloorPlan()" style="color:#fff;border-color:rgba(255,255,255,.4)">↻ รีเฟรช</button>
+    </div>
+    <div class="card-body">
+      <!-- Legend -->
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:1.5rem;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text2)">
+          <div style="width:20px;height:20px;border-radius:6px;background:var(--navy2)"></div> มีผู้พัก
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text2)">
+          <div style="width:20px;height:20px;border-radius:6px;background:#dc2626"></div> ว่าง
+        </div>
+        <div style="margin-left:auto;font-size:13px;color:var(--text3)">คลิกที่ห้องเพื่อดูข้อมูล</div>
+      </div>
+
+      <!-- Floor grid -->
+      <div id="floorplan-grid" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL ═══ -->
 <div class="modal-bg" id="detail-modal" onclick="closeModal(event)">
   <div class="modal">
     <div class="modal-header">
       <h3 id="modal-title">รายละเอียด</h3>
       <button class="modal-close" onclick="document.getElementById('detail-modal').classList.remove('show')">×</button>
+    </div>
+    <div style="margin-bottom:1rem">
+      <button class="btn btn-gold btn-sm" id="modal-docx-btn" onclick="">📄 ดาวน์โหลดแบบฟอร์ม DOCX</button>
     </div>
     <div id="modal-body"></div>
   </div>
@@ -423,10 +476,12 @@ async function doLogout() {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 function showPage(p) {
-  document.getElementById('page-form').style.display = p==='form'?'block':'none';
-  document.getElementById('page-list').style.display = p==='list'?'block':'none';
-  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===(p==='form'?0:1)));
+  document.getElementById('page-form').style.display      = p==='form'?'block':'none';
+  document.getElementById('page-list').style.display      = p==='list'?'block':'none';
+  document.getElementById('page-floorplan').style.display = p==='floorplan'?'block':'none';
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===(p==='form'?0:p==='list'?1:2)));
   if (p==='list') loadList();
+  if (p==='floorplan') loadFloorPlan();
 }
 
 function showAlert(id, msg, type='success') {
@@ -495,6 +550,7 @@ function renderList(rows) {
       <td>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="viewDetail(${r.id})">ดู</button>
+          <button class="btn btn-gold btn-sm" onclick="downloadDocx(${r.id})" title="ดาวน์โหลดแบบฟอร์ม">📄 DOCX</button>
           <button class="btn btn-primary btn-sm" onclick="editRecord(${r.id})">แก้ไข</button>
           <button class="btn btn-danger btn-sm" onclick="deleteRecord(${r.id})">ลบ</button>
         </div>
@@ -512,6 +568,7 @@ async function exportExcel() {
       'ลำดับ': i+1,
       'ยศ': r.rank,
       'ตำแหน่ง': r.position||'',
+      'สังกัด': r.unit||'',
       'ชื่อ': r.first_name,
       'นามสกุล': r.last_name,
       'วันเกิด': r.birthdate ? new Date(r.birthdate).toLocaleDateString('th-TH') : '',
@@ -528,6 +585,38 @@ async function exportExcel() {
     XLSX.utils.book_append_sheet(wb, ws, 'ผู้พักอาศัย');
     const today = new Date().toLocaleDateString('th-TH').replace(/\//g,'-');
     XLSX.writeFile(wb, `survey_flat2_${today}.xlsx`);
+  } catch (err) {
+    showAlert('alert-list','✗ Export ไม่สำเร็จ: '+err.message,'error');
+  }
+}
+
+
+async function exportVehicles() {
+  try {
+    const res = await fetch(`${API}/export/vehicles`, { headers: authHeaders() });
+    if (res.status===401) { doLogout(); return; }
+    const json = await res.json();
+    const data = json.data.map((v,i) => ({
+      'ลำดับ': i+1,
+      'ประเภท': v.type==='car'?'รถยนต์':'รถจักรยานยนต์',
+      'ยศ': v.rank,
+      'ตำแหน่ง': v.position||'',
+      'สังกัด': v.unit||'',
+      'ชื่อ': v.first_name,
+      'นามสกุล': v.last_name,
+      'ห้อง': v.room_number,
+      'ชั้น': v.floor_number,
+      'โทรศัพท์': v.phone||'',
+      'เลขทะเบียน': v.plate_number,
+      'จังหวัด': v.plate_province||'',
+      'ยี่ห้อ': v.brand||'',
+      'สี': v.color||'',
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'ยานพาหนะ');
+    const today = new Date().toLocaleDateString('th-TH').replace(/\//g,'-');
+    XLSX.writeFile(wb, `vehicles_flat2_${today}.xlsx`);
   } catch (err) {
     showAlert('alert-list','✗ Export ไม่สำเร็จ: '+err.message,'error');
   }
@@ -618,6 +707,7 @@ function collectData() {
   return {
     rank:            document.getElementById('f-rank').value,
     position:        document.getElementById('f-position').value.trim()||null,
+    unit:            document.getElementById('f-unit').value.trim()||null,
     first_name:      document.getElementById('f-fname').value.trim(),
     last_name:       document.getElementById('f-lname').value.trim(),
     room_number:     document.getElementById('f-room').value.trim(),
@@ -668,11 +758,13 @@ async function viewDetail(id) {
   const cars=r.vehicles.filter(v=>v.type==='car');
   const motos=r.vehicles.filter(v=>v.type==='motorcycle');
   document.getElementById('modal-title').textContent=`${r.rank} ${r.first_name} ${r.last_name}`;
+  document.getElementById('modal-docx-btn').onclick = () => downloadDocx(r.id);
   document.getElementById('modal-body').innerHTML=`
     <div class="modal-sec">
       <div class="modal-sec-title">ข้อมูลส่วนตัว</div>
       <div class="dr"><span class="dl">ยศ</span><span>${r.rank}</span></div>
       <div class="dr"><span class="dl">ตำแหน่ง</span><span>${r.position||'—'}</span></div>
+      <div class="dr"><span class="dl">สังกัด</span><span>${r.unit||'—'}</span></div>
       <div class="dr"><span class="dl">ชื่อ-นามสกุล</span><span>${r.first_name} ${r.last_name}</span></div>
       <div class="dr"><span class="dl">วัน/เดือน/ปีเกิด</span><span>${fmtDate(r.birthdate)}</span></div>
       <div class="dr"><span class="dl">โทรศัพท์</span><span>${r.phone||'—'}</span></div>
@@ -708,6 +800,7 @@ async function editRecord(id) {
   document.getElementById('edit-id').value=id;
   document.getElementById('f-rank').value=r.rank;
   document.getElementById('f-position').value=r.position||'';
+  document.getElementById('f-unit').value=r.unit||'';
   document.getElementById('f-fname').value=r.first_name;
   document.getElementById('f-lname').value=r.last_name;
   document.getElementById('f-room').value=r.room_number;
@@ -751,6 +844,141 @@ async function deleteRecord(id) {
     showAlert('alert-list','✓ '+json.message);
     loadList();
   } catch(err) { showAlert('alert-list','✗ '+err.message,'error'); }
+}
+
+async function downloadDocx(id) {
+  try {
+    const res = await fetch(`${API}/${id}/docx`, { headers: authHeaders() });
+    if (res.status === 401) { doLogout(); return; }
+    if (!res.ok) { const j = await res.json(); throw new Error(j.error); }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // Get filename from header or fallback
+    const disp = res.headers.get('Content-Disposition') || '';
+    const match = disp.match(/filename\*=UTF-8''(.+)/);
+    a.download = match ? decodeURIComponent(match[1]) : `survey_${id}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(err) {
+    showAlert('alert-list', '✗ ' + err.message, 'error');
+  }
+}
+
+
+// ─── Floor Plan ──────────────────────────────────────────────────────────────
+let fpData = {}; // { "floor-room": residentObj }
+
+async function loadFloorPlan() {
+  try {
+    const res = await fetch(`${API}?sort=floor&order=asc&search=`, { headers: authHeaders() });
+    if (res.status===401) { doLogout(); return; }
+    const json = await res.json();
+    const rows = json.data || [];
+
+    // Build lookup: key = "floor_room"
+    fpData = {};
+    rows.forEach(r => {
+      const key = `${r.floor_number}_${r.room_number}`;
+      fpData[key] = r;
+    });
+
+    const occupied = rows.length;
+    const total    = 5 * 16;
+    document.getElementById('fp-summary').textContent =
+      `มีผู้พัก ${occupied} ห้อง / ว่าง ${total - occupied} ห้อง จากทั้งหมด ${total} ห้อง`;
+
+    renderFloorPlan();
+  } catch(err) {
+    document.getElementById('fp-summary').textContent = 'โหลดข้อมูลไม่สำเร็จ';
+  }
+}
+
+function renderFloorPlan() {
+  const grid = document.getElementById('floorplan-grid');
+  grid.innerHTML = '';
+
+  // Render floor 5 down to 1 (top = highest floor)
+  for (let floor = 5; floor >= 1; floor--) {
+    const row = document.createElement('div');
+    row.className = 'floor-row';
+
+    const label = document.createElement('div');
+    label.className = 'floor-label';
+    label.innerHTML = `<span class="fl-badge">ชั้น ${floor}</span> ห้องพักชั้นที่ ${floor}`;
+    row.appendChild(label);
+
+    const roomsGrid = document.createElement('div');
+    roomsGrid.className = 'rooms-grid';
+
+    for (let room = 1; room <= 16; room++) {
+      const key = `${floor}_${room}`;
+      const r   = fpData[key];
+      const cell = document.createElement('div');
+      cell.className = `room-cell ${r ? 'occupied' : 'vacant'}`;
+      cell.title     = r ? `${r.rank} ${r.first_name} ${r.last_name}` : 'ว่าง';
+
+      if (r) {
+        cell.innerHTML = `
+          <div class="room-num">${room}</div>
+          <div class="room-name">${r.rank}<br>${r.first_name}</div>`;
+        cell.onclick = () => viewFloorDetail(r.id);
+      } else {
+        cell.innerHTML = `
+          <div class="room-num">${room}</div>
+          <div class="room-name">ว่าง</div>`;
+      }
+
+      roomsGrid.appendChild(cell);
+    }
+
+    row.appendChild(roomsGrid);
+    grid.appendChild(row);
+  }
+}
+
+async function viewFloorDetail(id) {
+  const res = await fetch(`${API}/${id}`, { headers: authHeaders() });
+  const { data: r } = await res.json();
+  const cars  = r.vehicles.filter(v=>v.type==='car');
+  const motos = r.vehicles.filter(v=>v.type==='motorcycle');
+
+  document.getElementById('modal-title').textContent = `ห้อง ${r.room_number} ชั้น ${r.floor_number} — ${r.rank} ${r.first_name} ${r.last_name}`;
+  document.getElementById('modal-docx-btn').onclick = () => downloadDocx(r.id);
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-sec">
+      <div class="modal-sec-title">ข้อมูลส่วนตัว</div>
+      <div class="dr"><span class="dl">ยศ</span><span>${r.rank}</span></div>
+      <div class="dr"><span class="dl">ตำแหน่ง</span><span>${r.position||'—'}</span></div>
+      <div class="dr"><span class="dl">สังกัด</span><span>${r.unit||'—'}</span></div>
+      <div class="dr"><span class="dl">ชื่อ-นามสกุล</span><span>${r.first_name} ${r.last_name}</span></div>
+      <div class="dr"><span class="dl">วัน/เดือน/ปีเกิด</span><span>${fmtDate(r.birthdate)}</span></div>
+      <div class="dr"><span class="dl">โทรศัพท์</span><span>${r.phone||'—'}</span></div>
+      <div class="dr"><span class="dl">ที่อยู่ตามบัตรฯ</span><span style="white-space:pre-line">${r.id_card_address||'—'}</span></div>
+      <div class="dr"><span class="dl">หัวหน้าครอบครัว</span><span>${r.family_head==='self'?'ตนเอง':r.family_head}</span></div>
+    </div>
+    ${r.family_members.length?`
+    <div class="modal-sec">
+      <div class="modal-sec-title">ผู้พักอาศัย (${r.family_members.length} คน)</div>
+      ${r.family_members.map((m,i)=>`
+        <div style="background:#f8fafd;border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+          <div style="font-weight:700;color:var(--navy2);margin-bottom:4px;font-size:13px">คนที่ ${i+1}: ${m.prefix}${m.first_name} ${m.last_name} (${m.relationship})</div>
+          <div class="dr"><span class="dl">โทรศัพท์</span><span>${m.phone||'—'}</span></div>
+        </div>`).join('')}
+    </div>`:''}
+    ${cars.length?`<div class="modal-sec"><div class="modal-sec-title">รถยนต์ (${cars.length} คัน)</div>
+      ${cars.map(v=>`<div class="dr"><span class="dl"><span class="chip">${v.plate_number}${v.plate_province?' '+v.plate_province:''}</span></span><span>${[v.brand,v.color].filter(Boolean).join(' / ')||'—'}</span></div>`).join('')}
+    </div>`:''}
+    ${motos.length?`<div class="modal-sec"><div class="modal-sec-title">รถจักรยานยนต์ (${motos.length} คัน)</div>
+      ${motos.map(v=>`<div class="dr"><span class="dl"><span class="chip">${v.plate_number}${v.plate_province?' '+v.plate_province:''}</span></span><span>${[v.brand,v.color].filter(Boolean).join(' / ')||'—'}</span></div>`).join('')}
+    </div>`:''}
+    <div style="display:flex;gap:8px;margin-top:1rem">
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('detail-modal').classList.remove('show');editRecord(${r.id})">✎ แก้ไข</button>
+      <button class="btn btn-danger btn-sm" onclick="document.getElementById('detail-modal').classList.remove('show');deleteRecord(${r.id});loadFloorPlan()">ลบ</button>
+    </div>`;
+
+  document.getElementById('detail-modal').classList.add('show');
 }
 
 function closeModal(e) {

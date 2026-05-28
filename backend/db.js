@@ -24,6 +24,7 @@ const DDL = `
     family_head    TEXT NOT NULL DEFAULT 'self',
     resident_count INTEGER NOT NULL DEFAULT 0,
     position       TEXT,
+    unit           TEXT,
     birthdate      DATE,
     id_card_address TEXT,
     phone          TEXT,
