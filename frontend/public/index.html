@@ -145,6 +145,58 @@ tr:hover td{background:#f8fafd}
 .room-detail-modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:1.5rem}
 @media(max-width:900px){.rooms-grid{grid-template-columns:repeat(8,1fr)}}
 @media(max-width:500px){.rooms-grid{grid-template-columns:repeat(4,1fr)}.room-cell{border-radius:6px}}
+
+/* ── Badge red ── */
+.badge-red{background:#fee2e2;color:#991b1b}
+
+/* ── Mobile improvements ── */
+@media(max-width:768px){
+  .topbar{height:auto;flex-wrap:wrap;padding:.75rem 1rem;gap:8px}
+  .topbar-brand{font-size:14px}
+  .topbar-right{width:100%;justify-content:space-between;flex-wrap:wrap;gap:6px}
+  .nav-tabs{flex-wrap:wrap;gap:3px}
+  .nav-tab{padding:5px 10px;font-size:12px}
+  .user-chip{font-size:12px;padding:3px 8px}
+  .btn-logout{font-size:12px;padding:4px 8px}
+
+  .container{padding:.75rem}
+  .card-header{padding:1rem;flex-direction:column;align-items:flex-start;gap:10px}
+  .card-header .btn{align-self:flex-end}
+  .card-body{padding:1rem}
+
+  .section{padding:1rem}
+  .row2,.row4{grid-template-columns:1fr}
+  .plate-row{grid-template-columns:1fr}
+
+  .list-toolbar{flex-direction:column}
+  .search-input,.sort-select{width:100%}
+
+  .tbl-wrap{font-size:13px}
+  th,td{padding:8px 10px}
+  .btn-sm{padding:4px 8px;font-size:12px}
+
+  table thead tr th:nth-child(5),
+  table thead tr th:nth-child(6),
+  table thead tr th:nth-child(7),
+  table tbody tr td:nth-child(5),
+  table tbody tr td:nth-child(6),
+  table tbody tr td:nth-child(7){ display:none }
+
+  .rooms-grid{grid-template-columns:repeat(8,1fr);gap:4px}
+  .room-cell{border-radius:6px}
+  .room-name{display:none}
+
+  .modal{max-width:100%;margin:.5rem;border-radius:var(--radius)}
+
+  .login-card{margin:.5rem}
+  .login-body{padding:1.5rem}
+}
+
+@media(max-width:400px){
+  .rooms-grid{grid-template-columns:repeat(4,1fr)}
+  .nav-tab{padding:4px 8px;font-size:11px}
+}
+
 /* ── Loader ── */
 .loader{display:none;text-align:center;padding:2rem;color:var(--text3)}
 .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--navy2);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
@@ -202,6 +254,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
         <button class="nav-tab active" onclick="showPage('form')">กรอกข้อมูล</button>
         <button class="nav-tab" onclick="showPage('list')">รายการทั้งหมด</button>
         <button class="nav-tab" onclick="showPage('floorplan')">🏢 แผนผังห้องพัก</button>
+        <button class="nav-tab" onclick="showPage('audit')">📋 ประวัติการแก้ไข</button>
       </div>
       <div class="user-chip">👤 <span id="username-display"></span></div>
       <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
@@ -238,6 +291,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
                 <label class="lbl">ตำแหน่ง</label>
                 <input type="text" id="f-position" placeholder="เช่น ผู้บังคับหมู่">
               </div>
+            </div>
+            <div class="field">
+              <label class="lbl">สังกัด</label>
+              <input type="text" id="f-unit" placeholder="เช่น กองพันทหารราบที่ 1">
             </div>
             <div class="row2">
               <div class="field"><label class="lbl">ชื่อ <span class="req">*</span></label><input type="text" id="f-fname" placeholder="ชื่อ" required></div>
@@ -391,6 +448,30 @@ hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
   </div>
 </div>
 
+<!-- ═══ AUDIT LOG PAGE ═══ -->
+<div id="page-audit" class="container" style="display:none">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+        <div><h2>ประวัติการแก้ไขข้อมูล</h2><div class="sub">บันทึกทุกการเพิ่ม แก้ไข และลบข้อมูล</div></div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="loadAudit()" style="color:#fff;border-color:rgba(255,255,255,.4)">↻ รีเฟรช</button>
+    </div>
+    <div class="card-body">
+      <div class="loader" id="audit-loader"><div class="spinner"></div>กำลังโหลด...</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>วันที่/เวลา</th><th>การกระทำ</th><th>ชื่อ-ห้อง</th><th>ผู้ดำเนินการ</th><th>รายละเอียด</th>
+          </tr></thead>
+          <tbody id="audit-body"><tr><td colspan="5"><div class="empty-state">กำลังโหลด...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL ═══ -->
 <div class="modal-bg" id="detail-modal" onclick="closeModal(event)">
   <div class="modal">
@@ -476,19 +557,22 @@ async function doLogout() {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 function showPage(p) {
-  document.getElementById('page-form').style.display      = p==='form'?'block':'none';
-  document.getElementById('page-list').style.display      = p==='list'?'block':'none';
-  document.getElementById('page-floorplan').style.display = p==='floorplan'?'block':'none';
-  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===(p==='form'?0:p==='list'?1:2)));
-  if (p==='list') loadList();
+  ['form','list','floorplan','audit'].forEach(pg =>
+    document.getElementById('page-'+pg).style.display = p===pg?'block':'none'
+  );
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>
+    t.classList.toggle('active',i===['form','list','floorplan','audit'].indexOf(p))
+  );
+  if (p==='list')      loadList();
   if (p==='floorplan') loadFloorPlan();
+  if (p==='audit')     loadAudit();
 }
 
 function showAlert(id, msg, type='success') {
   const el = document.getElementById(id);
   el.className = `alert alert-${type}`;
   el.innerHTML = msg; el.style.display = 'block';
-  setTimeout(()=>el.style.display='none', 4000);
+  setTimeout(()=>el.style.display='none', type==='error'?8000:4000);
 }
 
 function fmtDate(d) {
@@ -732,6 +816,13 @@ async function submitForm(e) {
     const headers = editId ? authHeaders() : {'Content-Type':'application/json'};
     const res = await fetch(url,{method,headers,body:JSON.stringify(data)});
     const json = await res.json();
+    if (res.status === 409) {
+      // Duplicate room — offer to view existing
+      const existing = json.existing;
+      const msg = `⚠️ ${json.error}${existing?' ('+existing.name+')':''}`;
+      showAlert('alert-form', msg + (existing?` <button class="btn btn-outline btn-sm" style="margin-left:8px" onclick="editRecord(${existing.id})">ดูข้อมูลเดิม</button>`:''), 'error');
+      return;
+    }
     if (!res.ok) throw new Error(json.error||'เกิดข้อผิดพลาด');
     showAlert('alert-form','✓ '+json.message);
     resetForm();
@@ -979,6 +1070,50 @@ async function viewFloorDetail(id) {
     </div>`;
 
   document.getElementById('detail-modal').classList.add('show');
+}
+
+
+// ─── Audit Log ───────────────────────────────────────────────────────────────
+async function loadAudit() {
+  document.getElementById('audit-loader').style.display = 'block';
+  document.getElementById('audit-body').innerHTML = '';
+  try {
+    const res = await fetch('/api/audit-logs?limit=200', { headers: authHeaders() });
+    if (res.status===401) { doLogout(); return; }
+    const json = await res.json();
+    renderAudit(json.data||[]);
+  } catch(err) {
+    document.getElementById('audit-body').innerHTML =
+      `<tr><td colspan="5"><div class="empty-state">⚠️ ${err.message}</div></td></tr>`;
+  } finally {
+    document.getElementById('audit-loader').style.display = 'none';
+  }
+}
+
+function renderAudit(rows) {
+  if (!rows.length) {
+    document.getElementById('audit-body').innerHTML =
+      `<tr><td colspan="5"><div class="empty-state">ยังไม่มีประวัติการแก้ไข</div></td></tr>`;
+    return;
+  }
+  const actionMap = {
+    CREATE: { label:'เพิ่มข้อมูล', cls:'badge-green' },
+    UPDATE: { label:'แก้ไขข้อมูล', cls:'badge-gold' },
+    DELETE: { label:'ลบข้อมูล',   cls:'badge-red' },
+  };
+  document.getElementById('audit-body').innerHTML = rows.map(r => {
+    const a = actionMap[r.action] || { label:r.action, cls:'badge-navy' };
+    const dt = new Date(r.created_at);
+    const dateStr = dt.toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric'});
+    const timeStr = dt.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+    return `<tr>
+      <td style="font-size:13px;white-space:nowrap">${dateStr}<br><span style="color:var(--text3)">${timeStr}</span></td>
+      <td><span class="badge ${a.cls}">${a.label}</span></td>
+      <td style="font-size:13px">${r.resident_name||'—'}<br><span style="color:var(--text3)">ชั้น ${r.floor_number||'?'} ห้อง ${r.room_number||'?'}</span></td>
+      <td style="font-size:13px">${r.changed_by}</td>
+      <td style="font-size:13px;color:var(--text2)">${r.detail||'—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 function closeModal(e) {

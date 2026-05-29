@@ -52,7 +52,18 @@ hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
 .success-icon{font-size:64px;margin-bottom:1rem}
 .success-page h2{font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px}
 .success-page p{color:var(--text2);margin-bottom:1.5rem}
-@media(max-width:640px){.row2,.row4,.plate-row{grid-template-columns:1fr}.container{padding:1rem}.topbar{padding:0 1rem}}
+
+/* ── Mobile ── */
+@media(max-width:768px){
+  .topbar{padding:0 1rem;height:52px}
+  .topbar-brand{font-size:14px}
+  .container{padding:.75rem}
+  .card-body{padding:1rem}
+  .section{padding:1rem}
+  .row2,.row4,.plate-row{grid-template-columns:1fr}
+  .btn-full{padding:11px}
+}
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
